@@ -1,0 +1,23 @@
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\obj\Debug\ResolveAssemblyReference.cache
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\Pdu-Wattbox-Epi.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\Pdu-Wattbox-Epi.pdb
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\Essentials Devices Common.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\PepperDash_Core.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\PepperDash_Essentials_Core.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\PepperDashEssentials.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\SimplSharpNewtonsoft.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\SimplSharpReflectionInterface.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\Crestron.SimplSharpPro.Lighting.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\SimplSharpSQLHelperInterface.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\PepperDash_Essentials_DM.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\Crestron.SimplSharpPro.Fusion.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\Crestron.SimplSharpPro.Shades.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\Crestron.SimplSharpPro.EthernetCommunications.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\Crestron.SimplSharpPro.DeviceSupport.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\Crestron.SimplSharpPro.UI.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\SimplSharpTimerEventInterface.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\Crestron.SimplSharpPro.Gateways.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\Crestron.SimplSharpPro.GeneralIO.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\bin\Debug\Crestron.SimplSharpPro.DM.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\obj\Debug\Pdu-Wattbox-Epi.dll
+C:\Development\WattBox\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\Pdu-Wattbox-Epi\obj\Debug\Pdu-Wattbox-Epi.pdb
