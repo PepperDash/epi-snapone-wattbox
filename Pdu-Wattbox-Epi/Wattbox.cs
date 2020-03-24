@@ -28,8 +28,11 @@ namespace Pdu_Wattbox_Epi {
         public Properties props { get; set; }
 
         public BoolFeedback IsOnlineFeedback;
-        public List<BoolFeedback> IsPowerOn;
-        public List<bool> _IsPowerOn;
+        //public List<BoolFeedback> IsPowerOn;
+
+        public Dictionary<int, BoolFeedback> IsPowerOn;
+        public Dictionary<int, bool> _IsPowerOn;
+        //public List<bool> _IsPowerOn;
 
         private bool IsOnline { get; set; }
 
@@ -63,12 +66,17 @@ namespace Pdu_Wattbox_Epi {
 
             _Dc = dc;
             IsOnlineFeedback = new BoolFeedback(() => IsOnline);
-            IsPowerOn = new List<BoolFeedback>();
-            _IsPowerOn = new List<bool>();
+
+            //_IsPowerOn = new List<bool>();
+            _IsPowerOn = new Dictionary<int, bool>();
+            IsPowerOn = new Dictionary<int, BoolFeedback>();
+            //IsPowerOn = new List<BoolFeedback>();
+
             Name = name;
 
-            IsPowerOn.Clear();
-            _IsPowerOn.Clear();
+            
+
+
 
             
 
@@ -82,17 +90,22 @@ namespace Pdu_Wattbox_Epi {
             Password = props.Control.TcpSshProperties.Password;
             Authorization = "Basic";
 
+
+            Init();
+        }
+
+        public void Init()
+        {
+
             Debug.Console(2, this, "There are {0} outlets for {1}", props.Outlets.Count(), this.Name);
-            for (int i = 0; i < props.Outlets.Count(); i++)
-			{
-                int j = i;
-                if (props.Outlets[j].enabled) {
-                    Debug.Console(2, this, "The Outlet's name is {0}", props.Outlets[j].name);
-                    _IsPowerOn.Insert(j, false);
-                    IsPowerOn.Insert(j, new BoolFeedback(() => _IsPowerOn[j]));
-                }
-			}
-            
+            foreach (var item in props.Outlets)
+            {
+                var i = item;
+
+                Debug.Console(2, this, "The Outlet's name is {0} and it has an index of {1}", i.name, i.outletNumber);
+                _IsPowerOn.Add(i.outletNumber, false);
+                IsPowerOn.Add(i.outletNumber, new BoolFeedback(() => _IsPowerOn[i.outletNumber]));
+            }
         }
 
         public override bool CustomActivate() {
@@ -153,6 +166,7 @@ namespace Pdu_Wattbox_Epi {
 
             }
             catch (Exception e) {
+                Debug.Console(2, this, "Exception in HTTP Request : {0}", e.Message);
             }
         }
 
@@ -167,8 +181,8 @@ namespace Pdu_Wattbox_Epi {
                 var OutletStatus = result.Split(',');
 
                 for (int i = 0; i < OutletStatus.Count(); i++) {
-                    _IsPowerOn[i] = OutletStatus[i] == "1" ? true : false;
-                    IsPowerOn[i].FireUpdate();
+                    _IsPowerOn[i + 1] = OutletStatus[i] == "1" ? true : false;
+                    IsPowerOn[i + 1].FireUpdate();
                 }
             }
             else

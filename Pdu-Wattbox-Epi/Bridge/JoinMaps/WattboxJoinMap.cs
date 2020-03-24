@@ -16,16 +16,19 @@ namespace Pdu_Wattbox_Epi.Bridge.JoinMaps {
         public uint PowerReboot { get; set; }
         public uint DeviceName { get; set; }
         public uint OutletName { get; set; }
+        public uint Enabled { get; set; }
 
         public WattboxJoinMap(uint JoinStart) {
 
             //Digital
             Online = 1;
-            PowerReboot = 2;
-            PowerOn = 3;
-            PowerOnFb = 3;
-            PowerOff = 4;
-            PowerOffFb = 4;
+            Enabled = 2;
+            PowerReboot = 3;
+            PowerOn = 4;
+            PowerOnFb = 4;
+            PowerOff = 5;
+            PowerOffFb = 5;
+
 
             //Analog
 

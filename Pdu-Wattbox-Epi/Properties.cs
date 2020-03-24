@@ -15,7 +15,8 @@ namespace Pdu_Wattbox_Epi {
     }
 
     public class Outlet {
-        public string key {get; set;}
+        public string key { get; set; }
+        public int outletNumber { get; set; }
         public bool enabled { get; set; }
         public string name { get; set; }
 

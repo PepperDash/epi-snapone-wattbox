@@ -1,5 +1,7 @@
-﻿MainAssembly=Pdu-Wattbox-Epi.dll:1e0a74289323e8eddc90b0af204ea28c
+﻿MainAssembly=Pdu-Wattbox-Epi.dll:04a7d9f67f89acf436516f838acae83a
 MainAssemblyMinFirmwareVersion=1.009.0029
+MainAssemblyResource=SimplSharpData.dat:820b61c48c8a2cace82957eed4cc377c
+MainAssemblyResource=SimplSharpData.dat.der:bf862965c00f3e6ec535e4e00e82d30c
 MainAssemblyResource=SimplSharpData.dat:820b61c48c8a2cace82957eed4cc377c
 MainAssemblyResource=SimplSharpData.dat.der:bf862965c00f3e6ec535e4e00e82d30c
 ü

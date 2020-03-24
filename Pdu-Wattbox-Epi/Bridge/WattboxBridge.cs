@@ -26,23 +26,42 @@ namespace Pdu_Wattbox_Epi.Bridge {
 
             WattboxDevice.IsOnlineFeedback.LinkInputSig(trilist.BooleanInput[joinMap.Online]);
             trilist.StringInput[joinMap.DeviceName].StringValue = WattboxDevice.Name;
+            Debug.Console(2, WattboxDevice, "There are a total of {0} Power On Feedbacks", WattboxDevice.IsPowerOn.Count());
+            foreach (var item in WattboxDevice.props.Outlets)
+            {
+                var o = item;
+                var x = (item.outletNumber - 1) * 4;
+                Debug.Console(2, WattboxDevice, "x = {0}", x);
+                trilist.BooleanInput[joinMap.Enabled + (ushort)x].BoolValue = o.enabled;
+                trilist.SetSigTrueAction((joinMap.PowerReboot + (ushort)x), () => WattboxDevice.SetOutlet(o.outletNumber, 3));
 
-            ushort x = 0;
-            for (int i = 0; i < WattboxDevice.props.Outlets.Count(); i++) {
-                var j = i;
-                var o = WattboxDevice.props.Outlets[j];
-                if (o.enabled) {
-                    trilist.SetSigTrueAction((joinMap.PowerReboot + x), () => WattboxDevice.SetOutlet(j + 1 , 3));
-                    trilist.SetSigTrueAction((joinMap.PowerOn + x), () => WattboxDevice.SetOutlet(j + 1, 1));
-                    trilist.SetSigTrueAction((joinMap.PowerOff + x), () => WattboxDevice.SetOutlet(j + 1, 0));
+                trilist.SetSigTrueAction((joinMap.PowerOn + (ushort)x), () => WattboxDevice.SetOutlet(o.outletNumber, 1));
 
-                    trilist.StringInput[joinMap.OutletName + x].StringValue = o.name;
+                trilist.SetSigTrueAction((joinMap.PowerOff + (ushort)x), () => WattboxDevice.SetOutlet(o.outletNumber, 0));
 
-                    WattboxDevice.IsPowerOn[j].LinkInputSig(trilist.BooleanInput[joinMap.PowerOnFb + x]);
-                    WattboxDevice.IsPowerOn[j].LinkComplementInputSig(trilist.BooleanInput[joinMap.PowerOffFb + x]);
-                }
-                x += 3;
+                trilist.StringInput[joinMap.OutletName + (ushort)x].StringValue = o.name;
+
+                WattboxDevice.IsPowerOn[o.outletNumber].LinkInputSig(trilist.BooleanInput[joinMap.PowerOnFb + (ushort)x]);
+                WattboxDevice.IsPowerOn[o.outletNumber].LinkComplementInputSig(trilist.BooleanInput[joinMap.PowerOffFb + (ushort)x]);
             }
+
+            trilist.OnlineStatusChange += new Crestron.SimplSharpPro.OnlineStatusChangeEventHandler((d, args) =>
+            {
+                if (args.DeviceOnLine)
+                {
+                    trilist.StringInput[joinMap.DeviceName].StringValue = WattboxDevice.Name;
+                    foreach (var item in WattboxDevice.props.Outlets)
+                    {
+                        var o = item;
+                        var x = (item.outletNumber - 1) * 4;
+                        Debug.Console(2, WattboxDevice, "x = {0}", x);
+                        trilist.BooleanInput[joinMap.Enabled + (ushort)x].BoolValue = o.enabled;
+
+                        trilist.StringInput[joinMap.OutletName + (ushort)x].StringValue = o.name;
+                    }
+                }
+            }
+            );
 
         }
     }
