@@ -10,6 +10,7 @@ using PepperDash.Essentials.Devices.Common.Codec;
 using PepperDash.Essentials.Devices.Common.DSP;
 using System.Text.RegularExpressions;
 using Crestron.SimplSharp.Reflection;
+using PepperDash.Essentials.Core;
 using Newtonsoft.Json;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Bridges;
@@ -19,20 +20,26 @@ using Crestron.SimplSharp.Net.Http;
 using Crestron.SimplSharp.CrestronXml;
 using Crestron.SimplSharp.CrestronXmlLinq;
 using Pdu_Wattbox_Epi.Bridge;
+using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace Pdu_Wattbox_Epi {
     public class Wattbox : ReconfigurableDevice, IBridge {
-
-        DeviceConfig _Dc;
-
-        public Properties props { get; set; }
+        public Properties Props { get; set; }
 
         public BoolFeedback IsOnlineFeedback;
-        //public List<BoolFeedback> IsPowerOn;
+        //public List<BoolFeedback> IsPowerOnFeedback;
 
-        public Dictionary<int, BoolFeedback> IsPowerOn;
-        public Dictionary<int, bool> _IsPowerOn;
+        public Dictionary<int, BoolFeedback> IsPowerOnFeedback;
+        public Dictionary<int, bool> IsPowerOn;
         //public List<bool> _IsPowerOn;
+
+        public Dictionary<int, StringFeedback> OutletNameFeedbacks;
+        public Dictionary<int, string> OutletName;
+
+        public Dictionary<int, BoolFeedback> OutletEnabledFeedbacks;
+        public Dictionary<int, bool> OutletEnabled; 
+
+        public FeedbackCollection<Feedback> Feedbacks; 
 
         private bool IsOnline { get; set; }
 
@@ -45,12 +52,11 @@ namespace Pdu_Wattbox_Epi {
 
         public string BaseUrl { get; set; }
 
-        HttpClientRequest request = new HttpClientRequest();
-        HttpClientResponse response;
-        HttpClient client = new HttpClient();
+        readonly HttpClientRequest _request = new HttpClientRequest();
+        HttpClientResponse _response;
+        readonly HttpClient _client = new HttpClient();
 
-        CTimer PollTimer;
-
+        CTimer _pollTimer;
 
         public static void LoadPlugin() {
             DeviceFactory.AddFactoryForType("wattBox", Wattbox.BuildDevice);
@@ -63,31 +69,36 @@ namespace Pdu_Wattbox_Epi {
 
         public Wattbox(string key, string name, DeviceConfig dc)
             : base(dc) {
-
-            _Dc = dc;
+            var dc1 = dc;
+            if (dc1 == null) throw new ArgumentNullException("dc1");
             IsOnlineFeedback = new BoolFeedback(() => IsOnline);
 
             //_IsPowerOn = new List<bool>();
-            _IsPowerOn = new Dictionary<int, bool>();
-            IsPowerOn = new Dictionary<int, BoolFeedback>();
-            //IsPowerOn = new List<BoolFeedback>();
+            IsPowerOn = new Dictionary<int, bool>();
+            IsPowerOnFeedback = new Dictionary<int, BoolFeedback>();
+
+            OutletNameFeedbacks = new Dictionary<int, StringFeedback>();
+            OutletName = new Dictionary<int, string>();
+
+            OutletEnabledFeedbacks = new Dictionary<int, BoolFeedback>();
+            OutletEnabled = new Dictionary<int, bool>();    
+
+            Feedbacks = new FeedbackCollection<Feedback>();
+            //IsPowerOnFeedback = new List<BoolFeedback>();
 
             Name = name;
 
+        
             
 
-
-
-            
-
-            props = JsonConvert.DeserializeObject<Properties>(_Dc.Properties.ToString());
+            Props = JsonConvert.DeserializeObject<Properties>(dc1.Properties.ToString());
             Debug.Console(1, this, "Made it to constructor for Wattbox");
-            Debug.Console(2, this, "Wattbox Properties : {0}", _Dc.Properties.ToString());
+            Debug.Console(2, this, "Wattbox Properties : {0}", dc1.Properties.ToString());
 
-            BaseUrl = props.Control.TcpSshProperties.Address;
-            Port = props.Control.TcpSshProperties.Port;
-            Username = props.Control.TcpSshProperties.Username;
-            Password = props.Control.TcpSshProperties.Password;
+            BaseUrl = Props.Control.TcpSshProperties.Address;
+            Port = Props.Control.TcpSshProperties.Port;
+            Username = Props.Control.TcpSshProperties.Username;
+            Password = Props.Control.TcpSshProperties.Password;
             Authorization = "Basic";
 
 
@@ -97,19 +108,31 @@ namespace Pdu_Wattbox_Epi {
         public void Init()
         {
 
-            Debug.Console(2, this, "There are {0} outlets for {1}", props.Outlets.Count(), this.Name);
-            foreach (var item in props.Outlets)
+            Debug.Console(2, this, "There are {0} outlets for {1}", Props.Outlets.Count(), this.Name);
+            foreach (var item in Props.Outlets)
             {
                 var i = item;
-
                 Debug.Console(2, this, "The Outlet's name is {0} and it has an index of {1}", i.name, i.outletNumber);
-                _IsPowerOn.Add(i.outletNumber, false);
-                IsPowerOn.Add(i.outletNumber, new BoolFeedback(() => _IsPowerOn[i.outletNumber]));
+                OutletEnabled.Add(i.outletNumber, i.enabled);
+                IsPowerOn.Add(i.outletNumber, false);
+                OutletName.Add(i.outletNumber, i.name);
+                var isPowerOnFeedback = new BoolFeedback(() => IsPowerOn[i.outletNumber]);
+                var outletEnabledFeedback = new BoolFeedback(() => OutletEnabled[i.outletNumber]);
+                var outletNameFeedback = new StringFeedback(() => OutletName[i.outletNumber]);
+
+
+                IsPowerOnFeedback.Add(i.outletNumber, isPowerOnFeedback);
+                OutletEnabledFeedbacks.Add(i.outletNumber, outletEnabledFeedback);
+                OutletNameFeedbacks.Add(i.outletNumber, outletNameFeedback);
+                Feedbacks.Add(isPowerOnFeedback);
+                Feedbacks.Add(outletEnabledFeedback);
+                Feedbacks.Add(outletNameFeedback);
+                Feedbacks.Add(new StringFeedback("name", () => Name));
             }
         }
 
         public override bool CustomActivate() {
-            PollTimer = new CTimer(o => GetStatus(), null, 5000, 45000);
+            _pollTimer = new CTimer(o => GetStatus(), null, 5000, 45000);
             return true;
         }
 
@@ -120,28 +143,28 @@ namespace Pdu_Wattbox_Epi {
 
                 var encodedAuth = Convert.ToBase64String(plainText);
 
-                client.KeepAlive = false;
+                _client.KeepAlive = false;
                 if (Port == 0)
-                    client.Port = 80;
+                    _client.Port = 80;
                 else if (Port >= 1 || Port <= 65535)
-                    client.Port = Port;
+                    _client.Port = Port;
 
                 if (!string.IsNullOrEmpty(ContentType))
-                    request.Header.ContentType = ContentType;
+                    _request.Header.ContentType = ContentType;
                 if (!string.IsNullOrEmpty(Authorization))
-                    request.Header.SetHeaderValue("Authorization", String.Format("{0} {1}", Authorization, encodedAuth));
-                request.Header.SetHeaderValue("User-Agent", "APP");
-                request.KeepAlive = true;
-                request.Header.SetHeaderValue("Keep-Alive", "300");
+                    _request.Header.SetHeaderValue("Authorization", String.Format("{0} {1}", Authorization, encodedAuth));
+                _request.Header.SetHeaderValue("User-Agent", "APP");
+                _request.KeepAlive = true;
+                _request.Header.SetHeaderValue("Keep-Alive", "300");
 
-                request.Url.Parse(url);
-                request.RequestType = (RequestType)requestType;
+                _request.Url.Parse(url);
+                _request.RequestType = requestType;
 
-                response = client.Dispatch(request);
+                _response = _client.Dispatch(_request);
 
-                if (response != null)
+                if (_response != null)
                 {
-                    ResponseCode = response.Code;
+                    ResponseCode = _response.Code;
 
                     if (ResponseCode > 0)
                     {
@@ -152,9 +175,9 @@ namespace Pdu_Wattbox_Epi {
 
 
                     IsOnlineFeedback.FireUpdate();
-                    if (!String.IsNullOrEmpty(response.ContentString.ToString()))
+                    if (!String.IsNullOrEmpty(_response.ContentString.ToString()))
                     {
-                        ParseResponse(response.ContentString.ToString());
+                        ParseResponse(_response.ContentString.ToString());
                     }
                 }
                 else
@@ -178,11 +201,11 @@ namespace Pdu_Wattbox_Epi {
 
                 //var result2 = result.Element("outlet_status").Value;
 
-                var OutletStatus = result.Split(',');
+                var outletStatus = result.Split(',');
 
-                for (int i = 0; i < OutletStatus.Count(); i++) {
-                    _IsPowerOn[i + 1] = OutletStatus[i] == "1" ? true : false;
-                    IsPowerOn[i + 1].FireUpdate();
+                for (var i = 0; i < outletStatus.Count(); i++) {
+                    IsPowerOn[i + 1] = outletStatus[i] == "1" ? true : false;
+                    IsPowerOnFeedback[i + 1].FireUpdate();
                 }
             }
             else
