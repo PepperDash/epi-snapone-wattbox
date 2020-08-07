@@ -19,3 +19,6 @@ C:\Development\epi-pdu-wattbox\Pdu-Wattbox-Epi\bin\Release\Crestron.SimplSharpPr
 C:\Development\epi-pdu-wattbox\Pdu-Wattbox-Epi\bin\Release\Crestron.SimplSharpPro.DM.dll
 C:\Development\epi-pdu-wattbox\Pdu-Wattbox-Epi\obj\Release\ResolveAssemblyReference.cache
 C:\Development\epi-pdu-wattbox\Pdu-Wattbox-Epi\obj\Release\Pdu-Wattbox-Epi.dll
+C:\Development\epi-pdu-wattbox\Pdu-Wattbox-Epi\bin\Release\SimplSharpCryptographyInterface.dll
+C:\Development\epi-pdu-wattbox\Pdu-Wattbox-Epi\bin\Release\Crestron.SimplSharpPro.Remotes.dll
+C:\Development\epi-pdu-wattbox\Pdu-Wattbox-Epi\bin\Release\Crestron.SimplSharpPro.ThreeSeriesCards.dll

@@ -10,6 +10,7 @@ using PepperDash.Essentials.Core;
 namespace Pdu_Wattbox_Epi {
     public class Properties {
         public ControlPropertiesConfig Control { get; set; }
+        public string AuthType { get; set; }
 
         public List<Outlet> Outlets {get; set;}
     }

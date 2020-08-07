@@ -41,7 +41,7 @@ namespace Pdu_Wattbox_Epi {
 
         public FeedbackCollection<Feedback> Feedbacks; 
 
-        private bool IsOnline { get; set; }
+        public bool IsOnline { get; set; }
 
         public int Port { get; set; }
         public string Username { get; set; }
@@ -49,6 +49,7 @@ namespace Pdu_Wattbox_Epi {
         public string ContentType { get; set; }
         public string Authorization { get; set; }
         public int ResponseCode { get; set; }
+        private readonly string _authType;
 
         public string BaseUrl { get; set; }
 
@@ -95,6 +96,7 @@ namespace Pdu_Wattbox_Epi {
             Debug.Console(1, this, "Made it to constructor for Wattbox");
             Debug.Console(2, this, "Wattbox Properties : {0}", dc1.Properties.ToString());
 
+            _authType = Props.AuthType;
             BaseUrl = Props.Control.TcpSshProperties.Address;
             Port = Props.Control.TcpSshProperties.Port;
             Username = Props.Control.TcpSshProperties.Username;
@@ -136,54 +138,64 @@ namespace Pdu_Wattbox_Epi {
             return true;
         }
 
-        public void SubmitRequest(string url, RequestType requestType) {
+        public void SubmitRequest(string url, string dir, RequestType requestType) {
             try {
 
-                var plainText = Encoding.UTF8.GetBytes(String.Format("{0}:{1}", Username, Password));
-
-                var encodedAuth = Convert.ToBase64String(plainText);
-
-                _client.KeepAlive = false;
-                if (Port == 0)
-                    _client.Port = 80;
-                else if (Port >= 1 || Port <= 65535)
-                    _client.Port = Port;
-
-                if (!string.IsNullOrEmpty(ContentType))
-                    _request.Header.ContentType = ContentType;
-                if (!string.IsNullOrEmpty(Authorization))
-                    _request.Header.SetHeaderValue("Authorization", String.Format("{0} {1}", Authorization, encodedAuth));
-                _request.Header.SetHeaderValue("User-Agent", "APP");
-                _request.KeepAlive = true;
-                _request.Header.SetHeaderValue("Keep-Alive", "300");
-
-                _request.Url.Parse(url);
-                _request.RequestType = requestType;
-
-                _response = _client.Dispatch(_request);
-
-                if (_response != null)
+                if (_authType.Equals("basic", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    ResponseCode = _response.Code;
+                    var plainText = Encoding.UTF8.GetBytes(String.Format("{0}:{1}", Username, Password));
 
-                    if (ResponseCode > 0)
+                    var encodedAuth = Convert.ToBase64String(plainText);
+
+                    _client.KeepAlive = false;
+                    if (Port == 0)
+                        _client.Port = 80;
+                    else if (Port >= 1 || Port <= 65535)
+                        _client.Port = Port;
+
+                    if (!string.IsNullOrEmpty(ContentType))
+                        _request.Header.ContentType = ContentType;
+                    if (!string.IsNullOrEmpty(Authorization))
+                        _request.Header.SetHeaderValue("Authorization",
+                            String.Format("{0} {1}", Authorization, encodedAuth));
+                    _request.Header.SetHeaderValue("User-Agent", "APP");
+                    _request.KeepAlive = true;
+                    _request.Header.SetHeaderValue("Keep-Alive", "300");
+
+                    _request.Url.Parse(url);
+                    _request.RequestType = requestType;
+
+                    _response = _client.Dispatch(_request);
+
+                    if (_response != null)
                     {
-                        IsOnline = ResponseCode / 100 < 3 ? true : false;
+                        ResponseCode = _response.Code;
+
+                        if (ResponseCode > 0)
+                        {
+                            IsOnline = ResponseCode/100 < 3;
+                        }
+                        else
+                            IsOnline = false;
+
+
+                        IsOnlineFeedback.FireUpdate();
+                        if (!String.IsNullOrEmpty(_response.ContentString))
+                        {
+                            ParseResponse(_response.ContentString);
+                        }
                     }
                     else
-                        IsOnline = false;
-
-
-                    IsOnlineFeedback.FireUpdate();
-                    if (!String.IsNullOrEmpty(_response.ContentString.ToString()))
                     {
-                        ParseResponse(_response.ContentString.ToString());
+                        IsOnline = false;
+                        IsOnlineFeedback.FireUpdate();
                     }
                 }
-                else
+                else if (_authType.Equals("digest", StringComparison.CurrentCultureIgnoreCase))
                 {
-                    IsOnline = false;
-                    IsOnlineFeedback.FireUpdate();
+                    var digest = new DigestAuthFixer(String.Format("http://{0}", BaseUrl), Username,
+                        Password, requestType, this);
+                    var strResponse = digest.GrabResponse(dir);
                 }
 
 
@@ -214,14 +226,16 @@ namespace Pdu_Wattbox_Epi {
 
         public void GetStatus() {
             var newUrl = String.Format("http://{0}/wattbox_info.xml", BaseUrl);
+            var newDir = String.Format("/wattbox_info.xml");
 
-            SubmitRequest(newUrl, RequestType.Get);
+            SubmitRequest(newUrl, newDir,  RequestType.Get);
         }
 
         public void SetOutlet(int index, int action) {
             var newUrl = String.Format("http://{0}/control.cgi?outlet={1}&command={2}", BaseUrl, index, action);
+            var newDir = String.Format("/control.cgi?outlet={0}&command={1}", index, action);
 
-            SubmitRequest(newUrl, RequestType.Get);
+            SubmitRequest(newUrl, newDir, RequestType.Get);
         }
 
         #region IBridge Members
