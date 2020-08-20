@@ -1,51 +1,78 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Crestron.SimplSharp;
-using Crestron.SimplSharp.Reflection;
-using PepperDash.Essentials.Core;
+﻿using PepperDash.Essentials.Core;
 
-namespace Pdu_Wattbox_Epi.Bridge.JoinMaps {
-    public class WattboxJoinMap : JoinMapBase {
-        public uint Online { get; set; }
-        public uint PowerOn { get; set; }
-        public uint PowerOnFb { get; set; }
-        public uint PowerOff { get; set; }
-        public uint PowerOffFb { get; set; }
-        public uint PowerReboot { get; set; }
-        public uint DeviceName { get; set; }
-        public uint OutletName { get; set; }
-        public uint Enabled { get; set; }
+namespace Pdu_Wattbox_Epi.Bridge.JoinMaps
+{
+    public class WattboxJoinMap : JoinMapBaseAdvanced
+    {
 
-        public WattboxJoinMap(uint JoinStart) {
+        [JoinName("Online")] public JoinDataComplete Online =
+            new JoinDataComplete(new JoinData() {JoinNumber = 1, JoinSpan = 1},
+                new JoinMetadata()
+                {
+                    Description = "Device Online",
+                    JoinCapabilities = eJoinCapabilities.ToSIMPL,
+                    JoinType = eJoinType.Digital
+                });
 
-            //Digital
-            Online = 1;
-            Enabled = 2;
-            PowerReboot = 3;
-            PowerOn = 4;
-            PowerOnFb = 4;
-            PowerOff = 5;
-            PowerOffFb = 5;
+        [JoinName("Enabled")] public JoinDataComplete Enabled =
+            new JoinDataComplete(new JoinData() {JoinNumber = 2, JoinSpan = 1},
+                new JoinMetadata()
+                {
+                    Description = "Power Reset",
+                    JoinCapabilities = eJoinCapabilities.ToSIMPL,
+                    JoinType = eJoinType.Digital
+                });
 
+        [JoinName("PowerReset")] public JoinDataComplete PowerReset =
+            new JoinDataComplete(new JoinData() {JoinNumber = 3, JoinSpan = 1},
+                new JoinMetadata()
+                {
+                    Description = "Power Reset",
+                    JoinCapabilities = eJoinCapabilities.FromSIMPL,
+                    JoinType = eJoinType.Digital
+                });
 
-            //Analog
+        [JoinName("PowerOn")] public JoinDataComplete PowerOn =
+            new JoinDataComplete(new JoinData() {JoinNumber = 4, JoinSpan = 1},
+                new JoinMetadata()
+                {
+                    Description = "Power On Trigger and Feedback",
+                    JoinCapabilities = eJoinCapabilities.ToFromSIMPL,
+                    JoinType = eJoinType.Digital
+                });
 
-            //String
-            DeviceName = 1;
-            OutletName = 2;
+        [JoinName("PowerOff")] public JoinDataComplete PowerOff =
+            new JoinDataComplete(new JoinData() {JoinNumber = 5, JoinSpan = 1},
+                new JoinMetadata()
+                {
+                    Description = "Power Off Trigger and Feedback",
+                    JoinCapabilities = eJoinCapabilities.ToFromSIMPL,
+                    JoinType = eJoinType.Digital
+                });
 
-            OffsetJoinNumbers(JoinStart);
+        [JoinName("DeviceName")] public JoinDataComplete DeviceName =
+            new JoinDataComplete(new JoinData() {JoinNumber = 1, JoinSpan = 1},
+                new JoinMetadata()
+                {
+                    Description = "Device Online",
+                    JoinCapabilities = eJoinCapabilities.ToSIMPL,
+                    JoinType = eJoinType.Digital
+                });
 
+        [JoinName("OutletName")] public JoinDataComplete OutletName =
+            new JoinDataComplete(new JoinData() {JoinNumber = 2, JoinSpan = 1},
+                new JoinMetadata()
+                {
+                    Description = "Device Online",
+                    JoinCapabilities = eJoinCapabilities.ToSIMPL,
+                    JoinType = eJoinType.Digital
+                });
+
+        public WattboxJoinMap(uint joinStart)
+            : base(joinStart, typeof (WattboxJoinMap))
+        {
         }
 
-        public override void OffsetJoinNumbers(uint joinStart) {
-            var joinOffset = joinStart - 1;
-            var properties = this.GetType().GetCType().GetProperties().Where(o => o.PropertyType == typeof(uint)).ToList();
-            foreach (var property in properties) {
-                property.SetValue(this, (uint)property.GetValue(this, null) + joinOffset, null);
-            }
-        }
     }
+
 }

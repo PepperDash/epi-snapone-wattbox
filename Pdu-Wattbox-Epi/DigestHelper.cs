@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using Crestron.SimplSharp;
 using Crestron.SimplSharp.Cryptography;
-using Crestron.SimplSharp.CrestronIO;
 using Crestron.SimplSharp.Net.Http;
 
 namespace Pdu_Wattbox_Epi
@@ -23,13 +19,13 @@ namespace Pdu_Wattbox_Epi
         private static DateTime _cnonceDate;
         private static int _nc;
         private static RequestType _requestType;
-        private Wattbox _parent;
+        private WattboxHttp _parent;
 
         readonly HttpClientRequest _request = new HttpClientRequest();
         HttpClientResponse _response;
         readonly HttpClient _client = new HttpClient();
 
-        public DigestAuthFixer(string host, string user, string password, RequestType requestType, Wattbox parent)
+        public DigestAuthFixer(string host, string user, string password, RequestType requestType, WattboxHttp parent)
         {
             // TODO: Complete member initialization
             _host = host;
