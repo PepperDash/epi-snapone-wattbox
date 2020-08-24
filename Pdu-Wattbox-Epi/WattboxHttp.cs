@@ -1,17 +1,16 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core.Config;
-using Crestron.SimplSharpPro.DeviceSupport;
 using Crestron.SimplSharp.Net.Http;
 using Crestron.SimplSharp.CrestronXmlLinq;
 
-using Feedback = PepperDash.Essentials.Core.Feedback;
-
-namespace Pdu_Wattbox_Epi {
-    public class WattboxHttp : WattboxBase {
-
+namespace Pdu_Wattbox_Epi
+{
+    public class WattboxHttp : WattboxBase
+    {
         public int Port { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
@@ -22,9 +21,9 @@ namespace Pdu_Wattbox_Epi {
 
         public string BaseUrl { get; set; }
 
-        readonly HttpClientRequest _request = new HttpClientRequest();
-        HttpClientResponse _response;
-        readonly HttpClient _client = new HttpClient();
+        private readonly HttpClientRequest _request = new HttpClientRequest();
+        private HttpClientResponse _response;
+        private readonly HttpClient _client = new HttpClient();
 
 
         public WattboxHttp(string key, string name, DeviceConfig dc)
@@ -40,11 +39,18 @@ namespace Pdu_Wattbox_Epi {
             Username = Props.Control.TcpSshProperties.Username;
             Password = Props.Control.TcpSshProperties.Password;
             Authorization = "Basic";
-
         }
 
-        public void SubmitRequest(string url, string dir, RequestType requestType) {
-            try {
+        public override bool CustomActivate()
+        {
+            PollTimer = new CTimer(o => GetStatus(), null, 5000, 45000);
+            return true;
+        }
+
+        public void SubmitRequest(string url, string dir, RequestType requestType)
+        {
+            try
+            {
 
                 if (_authType.Equals("basic", StringComparison.InvariantCultureIgnoreCase))
                 {
@@ -102,16 +108,17 @@ namespace Pdu_Wattbox_Epi {
                         Password, requestType, this);
                     var strResponse = digest.GrabResponse(dir);
                 }
-
-
             }
-            catch (Exception e) {
+            catch (Exception e)
+            {
                 Debug.Console(2, this, "Exception in HTTP Request : {0}", e.Message);
             }
         }
 
-        public override void ParseResponse(string data) {
-            if (data.Contains("host_name")) {
+        public override void ParseResponse(string data)
+        {
+            if (data.Contains("host_name"))
+            {
                 var xml = XElement.Parse(data);
 
                 var result = xml.Element("outlet_status").Value;
@@ -120,7 +127,8 @@ namespace Pdu_Wattbox_Epi {
 
                 var outletStatus = result.Split(',');
 
-                for (var i = 0; i < outletStatus.Count(); i++) {
+                for (var i = 0; i < outletStatus.Count(); i++)
+                {
                     IsPowerOn[i + 1] = outletStatus[i] == "1" ? true : false;
                     IsPowerOnFeedback[i + 1].FireUpdate();
                 }
@@ -130,14 +138,16 @@ namespace Pdu_Wattbox_Epi {
         }
 
 
-        public override void GetStatus() {
+        public override void GetStatus()
+        {
             var newUrl = String.Format("http://{0}/wattbox_info.xml", BaseUrl);
             var newDir = String.Format("/wattbox_info.xml");
 
-            SubmitRequest(newUrl, newDir,  RequestType.Get);
+            SubmitRequest(newUrl, newDir, RequestType.Get);
         }
 
-        public override void SetOutlet(int index, int action) {
+        public override void SetOutlet(int index, int action)
+        {
             var newUrl = String.Format("http://{0}/control.cgi?outlet={1}&command={2}", BaseUrl, index, action);
             var newDir = String.Format("/control.cgi?outlet={0}&command={1}", index, action);
 

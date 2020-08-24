@@ -1,25 +1,20 @@
 ﻿using System;
 using System.Linq;
-using System.Text;
 using PepperDash.Core;
 using PepperDash.Essentials.Core.Config;
-using Crestron.SimplSharpPro.DeviceSupport;
+using Crestron.SimplSharp;
 
 
 namespace Pdu_Wattbox_Epi
 {
     public class WattboxSocket : WattboxBase
     {
-        /// <summary>
-        /// Communication Object for Device
-        /// </summary>
         public readonly IBasicCommunication Communication;
 
         public CommunicationGather PortGather { get; private set; }
 
-
-        private const string Delimiter = "\x0D\x0A";
-
+        private const string DelimiterOut = "\x0D\x0A";
+        private const string DelimiterIn = "\x0A";
 
         public WattboxSocket(string key, string name, IBasicCommunication comm, DeviceConfig dc)
             : base(key, name, dc)
@@ -36,8 +31,10 @@ namespace Pdu_Wattbox_Epi
                 socket.ConnectionChange += socket_ConnectionChange;
             }
 
-            PortGather = new CommunicationGather(Communication, Delimiter);
+            PortGather = new CommunicationGather(Communication, DelimiterIn);
             PortGather.LineReceived += PortGather_LineReceived;
+
+            AddPostActivationAction(Communication.Connect);
         }
 
         void PortGather_LineReceived(object sender, GenericCommMethodReceiveTextArgs args)
@@ -48,13 +45,19 @@ namespace Pdu_Wattbox_Epi
             {
                 ParseResponse(args.Text);
             }
-
         }
 
         void socket_ConnectionChange(object sender, GenericSocketStatusChageEventArgs args)
         {
             IsOnline = args.Client.IsConnected;
             IsOnlineFeedback.FireUpdate();
+            if (!args.Client.IsConnected)
+            {
+                if (PollTimer != null)
+                {
+                    PollTimer.Stop();
+                }
+            }
         }
 
         public override void ParseResponse(string data)
@@ -81,6 +84,26 @@ namespace Pdu_Wattbox_Epi
                     OutletNameFeedbacks[item.outletNumber].FireUpdate();
                 }
             }
+
+            else if (data.Contains("Username:"))
+            {
+                SendLine(Props.Control.TcpSshProperties.Username);
+            }
+            else if (data.Contains("Password:"))
+            {
+                SendLine(Props.Control.TcpSshProperties.Password);
+            }
+            else if (data.Contains("Logged In!"))
+            {
+                if (PollTimer == null)
+                {
+                    PollTimer = new CTimer(o => GetStatus(), null, 5000, 45000);
+                }
+                else
+                {
+                    PollTimer.Reset();
+                }
+            }
         }
 
         public override void SetOutlet(int outletNumber, int outletStatus)
@@ -100,7 +123,6 @@ namespace Pdu_Wattbox_Epi
                     break;
             }
             SendLine(String.Format("!OutletSet={0},{1}", outletNumber, actionString));
-
         }
 
         public void SendLine(string data)
@@ -108,20 +130,17 @@ namespace Pdu_Wattbox_Epi
             if (String.IsNullOrEmpty(data)) return;
 
             Debug.Console(1, this, "TX: '{0}'", data);
-            Communication.SendText(data + Delimiter);
+            Communication.SendText(data + DelimiterOut);
 
             if (data.Contains("!OutletSet"))
             {
                 GetStatus();
             }
-
         }
 
         public override void GetStatus()
         {
-            SendLine("!GetStatus");
+            SendLine("?GetStatus");
         }
-
-
     }
 }

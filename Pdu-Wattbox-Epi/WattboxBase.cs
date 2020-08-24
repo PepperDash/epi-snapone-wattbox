@@ -15,7 +15,7 @@ namespace Pdu_Wattbox_Epi
     {
         public Properties Props { get; set; }
 
-        CTimer _pollTimer;
+        public CTimer PollTimer;
 
         public bool IsOnline;
         public BoolFeedback IsOnlineFeedback;
@@ -79,11 +79,7 @@ namespace Pdu_Wattbox_Epi
             }
         }
 
-        public override bool CustomActivate()
-        {
-            _pollTimer = new CTimer(o => GetStatus(), null, 5000, 45000);
-            return true;
-        }
+        
 
         public abstract void GetStatus();
 
