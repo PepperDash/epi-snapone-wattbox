@@ -13,8 +13,9 @@ namespace Pdu_Wattbox_Epi
 
         public CommunicationGather PortGather { get; private set; }
 
-        private const string DelimiterOut = "\x0D\x0A";
+        private const string DelimiterOut = "\x0A";
         private const string DelimiterIn = "\x0A";
+        private const string DelimiterUsername = ": ";
 
         public WattboxSocket(string key, string name, IBasicCommunication comm, DeviceConfig dc)
             : base(key, name, dc)
@@ -31,7 +32,7 @@ namespace Pdu_Wattbox_Epi
                 socket.ConnectionChange += socket_ConnectionChange;
             }
 
-            PortGather = new CommunicationGather(Communication, DelimiterIn);
+            PortGather = new CommunicationGather(Communication, DelimiterUsername);
             PortGather.LineReceived += PortGather_LineReceived;
 
             AddPostActivationAction(Communication.Connect);
@@ -62,6 +63,8 @@ namespace Pdu_Wattbox_Epi
 
         public override void ParseResponse(string data)
         {
+            Debug.Console(2, this, "ParseResponse: {0}", data);
+
             if (data.Contains("?OutletStatus="))
             {
                 var outletStatString = data.Substring(15);
@@ -85,16 +88,23 @@ namespace Pdu_Wattbox_Epi
                 }
             }
 
-            else if (data.Contains("Username:"))
+            else if (data.Contains("Username"))
             {
-                SendLine(Props.Control.TcpSshProperties.Username);
+                SendLine(Props.Control.TcpSshProperties.Username);               
             }
-            else if (data.Contains("Password:"))
+            else if (data.Contains("Password"))
             {
+                PortGather.LineReceived -= PortGather_LineReceived;
+
+                //logging in changes the delmiter we're looking for...
+                PortGather = new CommunicationGather(Communication, DelimiterIn);
+                PortGather.LineReceived += PortGather_LineReceived;
+
                 SendLine(Props.Control.TcpSshProperties.Password);
             }
             else if (data.Contains("Logged In!"))
             {
+                
                 if (PollTimer == null)
                 {
                     PollTimer = new CTimer(o => GetStatus(), null, 5000, 45000);
@@ -140,7 +150,7 @@ namespace Pdu_Wattbox_Epi
 
         public override void GetStatus()
         {
-            SendLine("?GetStatus");
+            SendLine("?OutletStatus");
         }
     }
 }

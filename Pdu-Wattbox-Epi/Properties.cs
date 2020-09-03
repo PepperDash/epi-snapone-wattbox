@@ -3,7 +3,7 @@ using PepperDash.Core;
 
 namespace Pdu_Wattbox_Epi {
     public class Properties {
-        public ControlPropertiesConfig Control { get; set; }
+        public WattboxControlProperties Control { get; set; }
         public string AuthType { get; set; }
 
         public List<Outlet> Outlets {get; set;}
@@ -15,5 +15,10 @@ namespace Pdu_Wattbox_Epi {
         public bool enabled { get; set; }
         public string name { get; set; }
 
+    }
+
+    public class WattboxControlProperties
+    {
+        public TcpSshPropertiesConfig TcpSshProperties { get; set; }
     }
 }

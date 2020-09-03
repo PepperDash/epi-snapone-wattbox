@@ -1,4 +1,5 @@
-﻿using PepperDash.Essentials.Core;
+﻿using System;
+using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Core;
 using System.Collections.Generic;
@@ -16,16 +17,29 @@ namespace Pdu_Wattbox_Epi
 
         public override EssentialsDevice BuildDevice(DeviceConfig dc)
         {
-            Debug.Console(1, "Factory Attempting to create new Biamp Tesira Device");
+            Debug.Console(1, "Factory Attempting to create new Wattbox Device");
 
-            var comm = CommFactory.CreateCommForDevice(dc);
+            var method = dc.Properties["control"].Value<string>("method");
 
-            if (comm == null)
+            Debug.Console(1, "Wattbox control method: {0}", method.Equals("http",StringComparison.OrdinalIgnoreCase));
+
+            if (String.IsNullOrEmpty(method))
             {
+                Debug.Console(0, Debug.ErrorLogLevel.Warning, "No valid control method found");
+                throw new NullReferenceException("No valid control method found");
+            }
+
+            if (method.Equals("http", StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.Console(1, "Creating Wattbox using HTTP Comms");
                 return new WattboxHttp(dc.Key, dc.Name, dc);
             }
 
+
+            Debug.Console(1, "Creating Wattbox using TCP/IP Comms");
+            var comm = CommFactory.CreateCommForDevice(dc);
             return new WattboxSocket(dc.Key, dc.Name, comm, dc);
         }
+
     }
 }

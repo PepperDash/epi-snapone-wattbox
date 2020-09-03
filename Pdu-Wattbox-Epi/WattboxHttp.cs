@@ -43,7 +43,9 @@ namespace Pdu_Wattbox_Epi
 
         public override bool CustomActivate()
         {
+            Debug.Console(2, this, "Activating device");
             PollTimer = new CTimer(o => GetStatus(), null, 5000, 45000);
+
             return true;
         }
 
@@ -82,6 +84,8 @@ namespace Pdu_Wattbox_Epi
                     {
                         ResponseCode = _response.Code;
 
+                        Debug.Console(2, this, "{0}:{1}", url, ResponseCode);
+
                         if (ResponseCode > 0)
                         {
                             IsOnline = ResponseCode/100 < 3;
@@ -117,6 +121,7 @@ namespace Pdu_Wattbox_Epi
 
         public override void ParseResponse(string data)
         {
+            Debug.Console(2, this, "Response content: {0}", data);
             if (data.Contains("host_name"))
             {
                 var xml = XElement.Parse(data);
@@ -140,9 +145,11 @@ namespace Pdu_Wattbox_Epi
 
         public override void GetStatus()
         {
+            
             var newUrl = String.Format("http://{0}/wattbox_info.xml", BaseUrl);
             var newDir = String.Format("/wattbox_info.xml");
 
+            Debug.Console(2, this, "Sending status request to {0}", newUrl);
             SubmitRequest(newUrl, newDir, RequestType.Get);
         }
 
