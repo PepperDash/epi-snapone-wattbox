@@ -1,6 +1,7 @@
-﻿using System;
+﻿// For Basic SIMPL# Classes
+using System;
 using System.Collections.Generic;
-using Crestron.SimplSharp; // For Basic SIMPL# Classes
+using Crestron.SimplSharp;
 using PepperDash.Core;
 using Wattbox.Lib;
 using STRING = System.String;
@@ -16,9 +17,8 @@ namespace Wattbox
 
     public delegate void OutletNameUpdateSplus(INTEGER index, STRING name);
 
-    public class WattboxController:Device
+    public class WattboxController : Device
     {
-        private CTimer _pollTimer;
         private const INTEGER TrueSplus = 1;
         private const INTEGER FalseSplus = 0;
 
@@ -26,18 +26,21 @@ namespace Wattbox
         private const long DueTime = 5000;
 
         private IWattboxCommunications _comms;
+        private CTimer _pollTimer;
 
         /// <summary>
         /// SIMPL+ can only execute the default constructor. If you have variables that require initialization, please
         /// use an Initialize method
         /// </summary>
-        public WattboxController() : this(String.Empty)
+        public WattboxController() : this(STRING.Empty)
+        {
+        }
+
+        public WattboxController(string key) : base(key)
         {
         }
 
         public OutletStatusUpdateSplus UpdateOutletStatus { get; set; }
-
-        public WattboxController(string key):base(key){}
 
         public void Initialize(string key, string method, TcpSshPropertiesConfig tcpProperties)
         {
@@ -75,12 +78,15 @@ namespace Wattbox
                 StopTimer();
             }
 
-            _pollTimer = new CTimer((o) => GetStatus(), DueTime, PollTime );
+            _pollTimer = new CTimer((o) => GetStatus(), DueTime, PollTime);
         }
 
         private void StopTimer()
         {
-            if (_pollTimer == null) return;
+            if (_pollTimer == null)
+            {
+                return;
+            }
 
             _pollTimer.Stop();
             _pollTimer.Dispose();
@@ -101,9 +107,12 @@ namespace Wattbox
         {
             var handler = UpdateOutletStatus;
 
-            if (handler == null) return;
+            if (handler == null)
+            {
+                return;
+            }
 
-            for(INTEGER i = 1; i <= outletStatus.Count; i++)
+            for (INTEGER i = 1; i <= outletStatus.Count; i++)
             {
                 handler(i, outletStatus[i] ? TrueSplus : FalseSplus);
             }
