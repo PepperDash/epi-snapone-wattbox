@@ -3,10 +3,11 @@ using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Core;
 using System.Collections.Generic;
+using Wattbox.Lib;
 
 namespace Pdu_Wattbox_Epi
 {
-    public class WattboxFactory : EssentialsPluginDeviceFactory<WattboxBase>
+    public class WattboxFactory : EssentialsPluginDeviceFactory<WattboxController>
     {
         public WattboxFactory()
         {
@@ -20,8 +21,11 @@ namespace Pdu_Wattbox_Epi
             Debug.Console(1, "Factory Attempting to create new Wattbox Device");
 
             var method = dc.Properties["control"].Value<string>("method");
+            var tcpProperties = dc.Properties["control"].Value<TcpSshPropertiesConfig>("tcpSshProperties");
 
             Debug.Console(1, "Wattbox control method: {0}", method.Equals("http",StringComparison.OrdinalIgnoreCase));
+
+            IWattboxCommunications comms;
 
             if (String.IsNullOrEmpty(method))
             {
@@ -32,13 +36,18 @@ namespace Pdu_Wattbox_Epi
             if (method.Equals("http", StringComparison.OrdinalIgnoreCase))
             {
                 Debug.Console(1, "Creating Wattbox using HTTP Comms");
-                return new WattboxHttp(dc.Key, dc.Name, dc);
+                comms = new WattboxHttp(String.Format("{0}-http", dc.Key), String.Format("{0}-http", dc.Name),
+                    String.Empty, tcpProperties);
+            }
+            else
+            {
+                Debug.Console(1, "Creating Wattbox using TCP/IP Comms");
+                var comm = CommFactory.CreateCommForDevice(dc);
+                comms = new WattboxSocket(String.Format("{0}-tcp", dc.Key), String.Format("{0}-tcp", dc.Name), comm,
+                    tcpProperties);
             }
 
-
-            Debug.Console(1, "Creating Wattbox using TCP/IP Comms");
-            var comm = CommFactory.CreateCommForDevice(dc);
-            return new WattboxSocket(dc.Key, dc.Name, comm, dc);
+            return new WattboxController(dc.Key, dc.Name, comms, dc);
         }
 
     }
