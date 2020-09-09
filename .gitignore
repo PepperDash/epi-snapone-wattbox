@@ -364,3 +364,4 @@ FodyWeavers.xsd
 *.clz
 *.cplz
 /packages
+*.projectinfo
