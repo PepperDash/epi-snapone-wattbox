@@ -15,7 +15,7 @@ namespace Wattbox
 {
     public delegate void OutletStatusUpdateSplus(INTEGER index, INTEGER status);
 
-    public delegate void OutletNameUpdateSplus(INTEGER index, STRING name);
+    public delegate void OnlineStatusUpdate(INTEGER online);
 
     public class WattboxController : Device
     {
@@ -41,6 +41,14 @@ namespace Wattbox
         }
 
         public OutletStatusUpdateSplus UpdateOutletStatus { get; set; }
+        public OnlineStatusUpdate UpdateOnlineStatus { get; set; }
+
+        public void Initialize(STRING key, STRING method, STRING ipAddress, STRING userName, STRING password,
+            INTEGER port)
+        {
+            Initialize(key, method,
+                new TcpSshPropertiesConfig {Address = ipAddress, Port = port, Username = userName, Password = password});
+        }
 
         public void Initialize(string key, string method, TcpSshPropertiesConfig tcpProperties)
         {
@@ -57,6 +65,7 @@ namespace Wattbox
             }
 
             _comms.UpdateOutletStatus = UpdateOutlets;
+
         }
 
         public void PollEnable(INTEGER enable)
@@ -116,6 +125,15 @@ namespace Wattbox
             {
                 handler(i, outletStatus[i] ? TrueSplus : FalseSplus);
             }
+        }
+
+        private void UpdateOnline(bool online)
+        {
+            var handler = UpdateOnlineStatus;
+
+            if (handler == null) return;
+
+            handler(online ? TrueSplus : FalseSplus);
         }
     }
 }

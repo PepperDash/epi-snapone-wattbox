@@ -47,6 +47,7 @@ namespace Wattbox.Lib
 
         public bool IsOnline { get; set; }
         public OutletStatusUpdate UpdateOutletStatus { get; set; }
+        public OnlineStatusUpdate UpdateOnlineStatus { get; set; }
 
         public void SetOutlet(int outletNumber, int outletStatus)
         {
@@ -94,6 +95,12 @@ namespace Wattbox.Lib
         private void socket_ConnectionChange(object sender, GenericSocketStatusChageEventArgs args)
         {
             IsOnline = args.Client.IsConnected;
+
+            var handler = UpdateOnlineStatus;
+
+            if (handler == null) return;
+
+            handler(IsOnline);
         }
 
         public void ParseResponse(string data)

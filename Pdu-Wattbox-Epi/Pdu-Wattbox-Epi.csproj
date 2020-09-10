@@ -59,9 +59,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Essentials-Builds\PepperDash_Core.dll</HintPath>
     </Reference>
-    <Reference Include="PepperDash_Essentials_Core, Version=1.6.1.29156, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="PepperDash_Essentials_Core, Version=1.6.4.31717, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\essentials-builds\PepperDash_Essentials_Core.dll</HintPath>
+      <HintPath>..\packages\PepperDashEssentials\lib\net35\PepperDash_Essentials_Core.dll</HintPath>
     </Reference>
     <Reference Include="PepperDash_Essentials_DM, Version=1.6.1.29162, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

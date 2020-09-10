@@ -46,6 +46,7 @@ namespace Wattbox.Lib
         #region IWattboxCommunications Members
 
         public OutletStatusUpdate UpdateOutletStatus { get; set; }
+        public OnlineStatusUpdate UpdateOnlineStatus { get; set; }
         public bool IsOnline { get; set; }
 
 
@@ -119,6 +120,14 @@ namespace Wattbox.Lib
                     Debug.Console(2, "{0}:{1}", url, responseCode);
 
                     IsOnline = responseCode == 200;
+
+                    var handler = UpdateOnlineStatus;
+
+                    if (handler != null)
+                    {
+                        handler(IsOnline);
+                    }
+                    
 
                     if (!String.IsNullOrEmpty(response.ContentString))
                     {
