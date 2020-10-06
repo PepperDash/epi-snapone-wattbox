@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Crestron.SimplSharp;
 using PepperDash.Core;
+using PepperDash.Core.WebApi.Presets;
 using Wattbox.Lib;
 using STRING = System.String;
 using SSTRING = Crestron.SimplSharp.SimplSharpString;
@@ -46,26 +47,32 @@ namespace Wattbox
         public void Initialize(STRING key, STRING method, STRING ipAddress, STRING userName, STRING password,
             INTEGER port)
         {
+            Debug.Console(0, this, "Initializing: {0}:{1}:{2}:{3}:{4}:{5}", key, method, ipAddress, userName, password, port);
             Initialize(key, method,
                 new TcpSshPropertiesConfig {Address = ipAddress, Port = port, Username = userName, Password = password});
         }
 
         public void Initialize(string key, string method, TcpSshPropertiesConfig tcpProperties)
         {
+            Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "Initializing: {0}:{1}:{2}:{3}:{4}:{5}", key, method,
+                tcpProperties.Address,
+                tcpProperties.Username, tcpProperties.Password, tcpProperties.Port);
             Key = key;
 
             if (method.Equals("http", StringComparison.OrdinalIgnoreCase))
             {
-                _comms = new WattboxHttp(String.Format("{0}-http", key), "Wattbox-http", String.Empty, tcpProperties);
+                Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "Creating HTTP Wattbox Client");
+                _comms = new WattboxHttp(String.Format("{0}-http", key), "Wattbox-http", "Basic", tcpProperties);
             }
             else
             {
+                Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "Creating TCP/IP Wattbox Client");
                 var comms = new GenericTcpIpClient(String.Format("{0}-tcp", key));
-                _comms = new WattboxSocket(String.Format("{0}-socket", key), "Wattbox-http", comms, tcpProperties);
+                _comms = new WattboxSocket(String.Format("{0}-socket", key), "Wattbox-tcp", comms, tcpProperties);
             }
 
             _comms.UpdateOutletStatus = UpdateOutlets;
-
+            _comms.UpdateOnlineStatus = UpdateOnline;
         }
 
         public void PollEnable(INTEGER enable)
@@ -87,7 +94,8 @@ namespace Wattbox
                 StopTimer();
             }
 
-            _pollTimer = new CTimer((o) => GetStatus(), DueTime, PollTime);
+            Debug.Console(2, this, Debug.ErrorLogLevel.Notice, "Starting Poll timer. {0}:{1}", DueTime, PollTime);
+            _pollTimer = new CTimer((o) => GetStatus(),null, DueTime, PollTime);
         }
 
         private void StopTimer()
@@ -97,6 +105,8 @@ namespace Wattbox
                 return;
             }
 
+            Debug.Console(2, this, Debug.ErrorLogLevel.Notice, "Stopping Poll timer. {0}:{1}", DueTime, PollTime);
+
             _pollTimer.Stop();
             _pollTimer.Dispose();
             _pollTimer = null;
@@ -104,11 +114,14 @@ namespace Wattbox
 
         public void SetOutlet(INTEGER index, INTEGER action)
         {
+            Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "Setting outlet {0} to action {1}", index, action);
             _comms.SetOutlet(index, action);
         }
 
         public void GetStatus()
         {
+            if (_comms == null) return;
+            Debug.Console(2, this, "Polling for status");
             _comms.GetStatus();
         }
 
@@ -121,9 +134,12 @@ namespace Wattbox
                 return;
             }
 
+            Debug.Console(2, this, "OutletStatus Count: {0}",outletStatus.Count);
+
             for (INTEGER i = 1; i <= outletStatus.Count; i++)
             {
-                handler(i, outletStatus[i] ? TrueSplus : FalseSplus);
+                Debug.Console(2, this, "Index: {0} outletStatus.Count: {1} outletStatus: {2}", i, outletStatus.Count, outletStatus[i - 1]);
+                handler(i, outletStatus[i - 1] ? TrueSplus : FalseSplus);
             }
         }
 
@@ -132,6 +148,8 @@ namespace Wattbox
             var handler = UpdateOnlineStatus;
 
             if (handler == null) return;
+
+            Debug.Console(2, this, "Online: {0}", online);
 
             handler(online ? TrueSplus : FalseSplus);
         }

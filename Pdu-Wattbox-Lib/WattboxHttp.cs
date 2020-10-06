@@ -9,7 +9,6 @@ namespace Wattbox.Lib
 {
     public class WattboxHttp : IWattboxCommunications, IKeyed
     {
-        private readonly string _authType;
         private readonly string _authorization;
         private readonly HttpClient _client = new HttpClient();
         private readonly string _password;
@@ -25,12 +24,11 @@ namespace Wattbox.Lib
 
             Debug.Console(1, this, "Made it to constructor for Wattbox HTTP");
 
-            _authType = authType;
             BaseUrl = tcpProperties.Address;
             _port = tcpProperties.Port;
             _username = tcpProperties.Username;
             _password = tcpProperties.Password;
-            _authorization = "Basic";
+            _authorization = authType;
         }
 
         public string Name { get; set; }
@@ -63,7 +61,7 @@ namespace Wattbox.Lib
         {
             var newUrl = String.Format("http://{0}/control.cgi?outlet={1}&command={2}", BaseUrl, index, action);
             var newDir = String.Format("/control.cgi?outlet={0}&command={1}", index, action);
-
+            Debug.Console(2, Debug.ErrorLogLevel.Notice, "Url: {0}", newUrl);
             SubmitRequest(newUrl, newDir, RequestType.Get);
         }
 
@@ -78,11 +76,6 @@ namespace Wattbox.Lib
         {
             try
             {
-                if (!_authType.Equals("basic", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    return;
-                }
-
                 var plainText = Encoding.UTF8.GetBytes(String.Format("{0}:{1}", _username, _password));
 
                 var encodedAuth = Convert.ToBase64String(plainText);
@@ -111,6 +104,7 @@ namespace Wattbox.Lib
                 request.Url.Parse(url);
                 request.RequestType = requestType;
 
+                Debug.Console(2, this, "Sending request to {0}", request.Url);
                 var response = _client.Dispatch(request);
 
                 if (response != null)
@@ -127,7 +121,6 @@ namespace Wattbox.Lib
                     {
                         handler(IsOnline);
                     }
-                    
 
                     if (!String.IsNullOrEmpty(response.ContentString))
                     {
@@ -142,6 +135,7 @@ namespace Wattbox.Lib
             catch (Exception e)
             {
                 Debug.Console(2, this, "Exception in HTTP Request : {0}", e.Message);
+                Debug.Console(2, this, "Stack Trace: {0}", e.StackTrace);
             }
         }
 
