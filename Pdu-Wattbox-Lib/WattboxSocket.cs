@@ -70,6 +70,7 @@ namespace Wattbox.Lib
 
         public void Connect()
         {
+            Debug.Console(2, this, "Attempting to connect...");
             _communication.Connect();
         }
 
@@ -109,7 +110,8 @@ namespace Wattbox.Lib
 
             if (data.Contains("?OutletStatus="))
             {
-                var outletStatString = data.Substring(15);
+                var outletStatString = data.Substring(14);
+                Debug.Console(2, this, "state substring: {0}", outletStatString);
                 var outletStatusArray = outletStatString.Split(',').Select(s => s == "1").ToList();
 
                 var handler = UpdateOutletStatus;

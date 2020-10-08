@@ -23,6 +23,8 @@ namespace Wattbox
         private const INTEGER TrueSplus = 1;
         private const INTEGER FalseSplus = 0;
 
+        private const int BufferSize = 1024;
+
         private const long PollTime = 45000;
         private const long DueTime = 5000;
 
@@ -67,12 +69,15 @@ namespace Wattbox
             else
             {
                 Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "Creating TCP/IP Wattbox Client");
-                var comms = new GenericTcpIpClient(String.Format("{0}-tcp", key));
+                var comms = new GenericTcpIpClient(String.Format("{0}-tcp", key), tcpProperties.Address,
+                    tcpProperties.Port, BufferSize);
                 _comms = new WattboxSocket(String.Format("{0}-socket", key), "Wattbox-tcp", comms, tcpProperties);
             }
 
             _comms.UpdateOutletStatus = UpdateOutlets;
             _comms.UpdateOnlineStatus = UpdateOnline;
+
+            _comms.Connect();
         }
 
         public void PollEnable(INTEGER enable)
