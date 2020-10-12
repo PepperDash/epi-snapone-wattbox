@@ -3,6 +3,10 @@ Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pdu-Wattbox-Epi", "Pdu-Wattbox-Epi\Pdu-Wattbox-Epi.csproj", "{2FED79DD-DB18-4797-940D-69163EFC5CEC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pdu-Wattbox-Lib", "Pdu-Wattbox-Lib\Pdu-Wattbox-Lib.csproj", "{92C3D36C-082E-40F8-8A7C-2A58A398F44A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pdu-Wattbox-SPlus", "Pdu-Wattbox-SPlus\Pdu-Wattbox-SPlus.csproj", "{22E93AB8-40F8-4658-8041-B539C5C10CA4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +17,14 @@ Global
 		{2FED79DD-DB18-4797-940D-69163EFC5CEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2FED79DD-DB18-4797-940D-69163EFC5CEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2FED79DD-DB18-4797-940D-69163EFC5CEC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{92C3D36C-082E-40F8-8A7C-2A58A398F44A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92C3D36C-082E-40F8-8A7C-2A58A398F44A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92C3D36C-082E-40F8-8A7C-2A58A398F44A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92C3D36C-082E-40F8-8A7C-2A58A398F44A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22E93AB8-40F8-4658-8041-B539C5C10CA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22E93AB8-40F8-4658-8041-B539C5C10CA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22E93AB8-40F8-4658-8041-B539C5C10CA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22E93AB8-40F8-4658-8041-B539C5C10CA4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
