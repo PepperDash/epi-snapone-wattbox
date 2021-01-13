@@ -14,6 +14,7 @@ namespace Pdu_Wattbox_Epi
 {
     public class WattboxController : EssentialsBridgeableDevice
     {
+        private const long PollTime = 5000;
         private readonly IWattboxCommunications _comms;
         private readonly Dictionary<int, bool> _isPowerOn;
         private readonly Dictionary<int, bool> _outletEnabled;
@@ -24,7 +25,9 @@ namespace Pdu_Wattbox_Epi
         public BoolFeedback IsOnlineFeedback;
 
         public StringFeedback NameFeedback;
-        public CTimer PollTimer;
+
+        private CTimer _pollTimer;
+
 
         public WattboxController(string key, string name, IWattboxCommunications comms, DeviceConfig dc)
             : base(key, name)
@@ -32,7 +35,7 @@ namespace Pdu_Wattbox_Epi
             _comms = comms;
 
             _comms.UpdateOutletStatus = UpdateOutletStatus;
-            _comms.UpdateOnlineStatus = (b) => IsOnlineFeedback.FireUpdate();
+            _comms.UpdateOnlineStatus = UpdateOnlineStatus;
 
             IsOnlineFeedback = new BoolFeedback(() => _comms.IsOnline);
 
@@ -72,7 +75,24 @@ namespace Pdu_Wattbox_Epi
                 OutletNameFeedbacks.Add(i.outletNumber, outletNameFeedback);
                 Feedbacks.Add(isPowerOnFeedback);
                 Feedbacks.Add(outletEnabledFeedback);
+                Feedbacks.Add(outletNameFeedback);
             }
+
+            var control = CommFactory.GetControlPropertiesConfig(dc);
+
+            if (control.Method == eControlMethod.Http || control.Method == eControlMethod.Https)
+            {
+                _pollTimer = new CTimer((o) => GetStatus(), null, 0, PollTime);
+            }
+
+            CrestronEnvironment.ProgramStatusEventHandler += type =>
+            {
+                if (type != eProgramStatusEventType.Stopping) return;
+
+                _pollTimer.Stop();
+                _pollTimer.Dispose();
+                _pollTimer = null;
+            };
         }
 
         private void UpdateOutletStatus(List<bool> outletStatus)
@@ -81,6 +101,24 @@ namespace Pdu_Wattbox_Epi
             {
                 _isPowerOn[outlet.outletNumber] = outletStatus[outlet.outletNumber - 1];
                 IsPowerOnFeedback[outlet.outletNumber].FireUpdate();
+            }
+        }
+
+        private void UpdateOnlineStatus(bool online)
+        {
+            IsOnlineFeedback.FireUpdate();
+
+            if (!online)
+            {
+                _pollTimer.Stop();
+                _pollTimer.Dispose();
+                _pollTimer = null;
+                return;
+            }
+
+            if (_pollTimer == null)
+            {
+                _pollTimer = new CTimer((o) => GetStatus(), null, 0, PollTime);
             }
         }
 
@@ -154,5 +192,15 @@ namespace Pdu_Wattbox_Epi
                 }
             };
         }
+
+        #region Overrides of Device
+
+        public override bool CustomActivate()
+        {
+            _comms.Connect();
+            return base.CustomActivate();
+        }
+
+        #endregion
     }
 }
