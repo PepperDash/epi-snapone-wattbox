@@ -71,6 +71,8 @@ namespace Wattbox
                 Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "Creating TCP/IP Wattbox Client");
                 var comms = new GenericTcpIpClient(String.Format("{0}-tcp", key), tcpProperties.Address,
                     tcpProperties.Port, BufferSize);
+                comms.AutoReconnect = true;
+                comms.AutoReconnectIntervalMs = 10000;
                 _comms = new WattboxSocket(String.Format("{0}-socket", key), "Wattbox-tcp", comms, tcpProperties);
             }
 

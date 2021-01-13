@@ -20,31 +20,27 @@ namespace Pdu_Wattbox_Epi
         {
             Debug.Console(1, "Factory Attempting to create new Wattbox Device");
 
-            var method = dc.Properties["control"].Value<string>("method");
-            var tcpProperties = dc.Properties["control"].Value<TcpSshPropertiesConfig>("tcpSshProperties");
+            var controlProperties = CommFactory.GetControlPropertiesConfig(dc);
 
-            Debug.Console(1, "Wattbox control method: {0}", method.Equals("http",StringComparison.OrdinalIgnoreCase));
+            //var method = dc.Properties["control"].Value<string>("method");
+            //var tcpProperties = dc.Properties["control"].Value<TcpSshPropertiesConfig>("tcpSshProperties");
+
+            Debug.Console(1, "Wattbox control method: {0}", controlProperties.Method);
 
             IWattboxCommunications comms;
 
-            if (String.IsNullOrEmpty(method))
-            {
-                Debug.Console(0, Debug.ErrorLogLevel.Warning, "No valid control method found");
-                throw new NullReferenceException("No valid control method found");
-            }
-
-            if (method.Equals("http", StringComparison.OrdinalIgnoreCase))
+            if (controlProperties.Method == eControlMethod.Http)
             {
                 Debug.Console(1, "Creating Wattbox using HTTP Comms");
                 comms = new WattboxHttp(String.Format("{0}-http", dc.Key), String.Format("{0}-http", dc.Name),
-                    "Basic", tcpProperties);
+                    "Basic", controlProperties.TcpSshProperties);
             }
             else
             {
                 Debug.Console(1, "Creating Wattbox using TCP/IP Comms");
                 var comm = CommFactory.CreateCommForDevice(dc);
                 comms = new WattboxSocket(String.Format("{0}-tcp", dc.Key), String.Format("{0}-tcp", dc.Name), comm,
-                    tcpProperties);
+                    controlProperties.TcpSshProperties);
             }
 
             return new WattboxController(dc.Key, dc.Name, comms, dc);
