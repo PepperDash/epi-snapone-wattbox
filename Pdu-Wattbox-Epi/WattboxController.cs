@@ -32,6 +32,7 @@ namespace Pdu_Wattbox_Epi
             _comms = comms;
 
             _comms.UpdateOutletStatus = UpdateOutletStatus;
+            _comms.UpdateOnlineStatus = (b) => IsOnlineFeedback.FireUpdate();
 
             IsOnlineFeedback = new BoolFeedback(() => _comms.IsOnline);
 
