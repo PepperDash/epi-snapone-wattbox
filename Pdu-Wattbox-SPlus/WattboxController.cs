@@ -81,7 +81,7 @@ namespace Wattbox
 
             _comms.UpdateOutletStatus = UpdateOutlets;
             _comms.UpdateOnlineStatus = UpdateOnline;
-            _comms.UpdateLoggedInStatus = UpdateLoggedInStatus;
+            _comms.UpdateLoggedInStatus = UpdateLoggedIn;
 
             _comms.Connect();
         }
