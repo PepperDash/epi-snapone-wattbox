@@ -18,6 +18,8 @@ namespace Wattbox
 
     public delegate void OnlineStatusUpdate(INTEGER online);
 
+    public delegate void LoggedInStatusUpdateSplus(INTEGER loggedIn);
+
     public class WattboxController : Device
     {
         private const INTEGER TrueSplus = 1;
@@ -45,6 +47,7 @@ namespace Wattbox
 
         public OutletStatusUpdateSplus UpdateOutletStatus { get; set; }
         public OnlineStatusUpdate UpdateOnlineStatus { get; set; }
+        public LoggedInStatusUpdateSplus UpdateLoggedInStatus { get; set; }
 
         public void Initialize(STRING key, STRING method, STRING ipAddress, STRING userName, STRING password,
             INTEGER port)
@@ -78,9 +81,12 @@ namespace Wattbox
 
             _comms.UpdateOutletStatus = UpdateOutlets;
             _comms.UpdateOnlineStatus = UpdateOnline;
+            _comms.UpdateLoggedInStatus = UpdateLoggedInStatus;
 
             _comms.Connect();
         }
+
+        
 
         public void PollEnable(INTEGER enable)
         {
@@ -159,6 +165,15 @@ namespace Wattbox
             Debug.Console(2, this, "Online: {0}", online);
 
             handler(online ? TrueSplus : FalseSplus);
+        }
+
+        private void UpdateLoggedIn(bool status)
+        {
+            var handler = UpdateLoggedInStatus;
+
+            if (handler == null) return;
+
+            handler(status ? TrueSplus : FalseSplus);
         }
     }
 }

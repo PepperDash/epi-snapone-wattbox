@@ -45,6 +45,8 @@ namespace Wattbox.Lib
 
         public OutletStatusUpdate UpdateOutletStatus { get; set; }
         public OnlineStatusUpdate UpdateOnlineStatus { get; set; }
+        public LoggedInStatusUpdate UpdateLoggedInStatus { get; set; }
+        public bool IsLoggedIn { get; set; }
         public bool IsOnline { get; set; }
 
 

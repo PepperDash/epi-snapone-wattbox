@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.DeviceSupport;
@@ -34,10 +35,11 @@ namespace Pdu_Wattbox_Epi
         {
             _comms = comms;
 
+            IsOnlineFeedback = new BoolFeedback(() => _comms.IsOnline);
+
             _comms.UpdateOutletStatus = UpdateOutletStatus;
             _comms.UpdateOnlineStatus = UpdateOnlineStatus;
-
-            IsOnlineFeedback = new BoolFeedback(() => _comms.IsOnline);
+            _comms.UpdateLoggedInStatus = UpdateLoggedInStatus;
 
             //_IsPowerOn = new List<bool>();
             _isPowerOn = new Dictionary<int, bool>();
@@ -95,20 +97,9 @@ namespace Pdu_Wattbox_Epi
             };
         }
 
-        private void UpdateOutletStatus(List<bool> outletStatus)
+        private void UpdateLoggedInStatus(bool status)
         {
-            foreach (var outlet in _props.Outlets)
-            {
-                _isPowerOn[outlet.outletNumber] = outletStatus[outlet.outletNumber - 1];
-                IsPowerOnFeedback[outlet.outletNumber].FireUpdate();
-            }
-        }
-
-        private void UpdateOnlineStatus(bool online)
-        {
-            IsOnlineFeedback.FireUpdate();
-
-            if (!online)
+            if (!status)
             {
                 _pollTimer.Stop();
                 _pollTimer.Dispose();
@@ -120,6 +111,29 @@ namespace Pdu_Wattbox_Epi
             {
                 _pollTimer = new CTimer((o) => GetStatus(), null, 0, PollTime);
             }
+        }
+
+        private void UpdateOutletStatus(List<bool> outletStatus)
+        {
+            foreach (var outlet in _props.Outlets)
+            {
+                _isPowerOn[outlet.outletNumber] = outletStatus[outlet.outletNumber - 1];
+                IsPowerOnFeedback[outlet.outletNumber].FireUpdate();
+            }
+        }
+
+        private void UpdateOnlineStatus(bool online)
+        {
+            try
+            {
+                IsOnlineFeedback.FireUpdate();
+            }
+            catch (Exception ex)
+            {
+                Debug.Console(0, this, "Exception updating online status: {0}", ex.Message);
+                Debug.Console(1, this, "Exception updating online status: {1}", ex.StackTrace);
+            }
+            
         }
 
         //public List<BoolFeedback> IsPowerOnFeedback;
