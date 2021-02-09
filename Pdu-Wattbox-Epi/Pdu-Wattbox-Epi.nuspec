@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>PepperDash.Essentials.Plugin.Wattbox</id>
+    <version>1.5.6</version>
+    <title>Wattbox Essentials Plugin</title>
+    <authors>PepperDash Technologies</authors>
+    <owners>pepperdash</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/PepperDash-Engineering/epi-pdu-wattbox</projectUrl>
+    <copyright>Copyright 2021</copyright>
+    <description>Wattbox</description>
+    <tags>crestron 3series 4series</tags>
+    <repository type="git" url="https://github.com/PepperDash-Engineering/epi-pdu-wattbox"/>
+  </metadata>
+  <files>
+    <file src="**" target="lib\net35"/>
+  </files>
+</package>
