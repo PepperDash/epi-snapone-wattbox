@@ -55,7 +55,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\PepperDashEssentials\lib\net35\PepperDashEssentials.dll</HintPath>
     </Reference>
-    <Reference Include="PepperDash_Core, Version=1.0.42.789, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="PepperDash_Core, Version=1.0.43.36276, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\PepperDashEssentials\lib\net35\PepperDash_Core.dll</HintPath>
     </Reference>

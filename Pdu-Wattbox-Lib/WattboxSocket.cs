@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Crestron.SimplSharp;
 using PepperDash.Core;
 
 namespace Wattbox.Lib
@@ -45,9 +46,11 @@ namespace Wattbox.Lib
 
         #region IWattboxCommunications Members
 
+        public bool IsLoggedIn { get; set; }
         public bool IsOnline { get; set; }
         public OutletStatusUpdate UpdateOutletStatus { get; set; }
         public OnlineStatusUpdate UpdateOnlineStatus { get; set; }
+        public LoggedInStatusUpdate UpdateLoggedInStatus { get; set; }
 
         public void SetOutlet(int outletNumber, int outletStatus)
         {
@@ -83,10 +86,6 @@ namespace Wattbox.Lib
 
         private void PortGather_LineReceived(object sender, GenericCommMethodReceiveTextArgs args)
         {
-            if (Debug.Level == 2)
-            {
-                Debug.Console(2, this, "RX: '{0}'", args.Text);
-            }
             if (args.Text != "OK")
             {
                 ParseResponse(args.Text);
@@ -122,7 +121,11 @@ namespace Wattbox.Lib
                 }
 
                 handler(outletStatusArray);
-            } /*
+
+                return;
+            }
+
+            /*
             else if (data.Contains("?OutletName="))
             {
                 var outletNameString = data.Substring(12);
@@ -135,20 +138,39 @@ namespace Wattbox.Lib
                 }
             }*/
 
-            else if (data.Contains("Username"))
+            if (data.Contains("Successfully Logged In"))
             {
+                IsLoggedIn = true;
+                var handler = UpdateLoggedInStatus;
+
+                if (handler == null) return;
+
+                handler(IsLoggedIn);
+
+                return;
+            }
+
+            if (data.Contains("Username"))
+            {
+                Debug.Console(2, this, "sending username {0}", _config.Username);
                 SendLine(_config.Username);
+                return;
             }
-            else if (data.Contains("Password"))
+
+            if (!data.Contains("Password"))
             {
-                _portGather.LineReceived -= PortGather_LineReceived;
-
-                //logging in changes the delmiter we're looking for...
-                _portGather = new CommunicationGather(_communication, DelimiterIn);
-                _portGather.LineReceived += PortGather_LineReceived;
-
-                SendLine(_config.Password);
+                return;
             }
+
+            _portGather.LineReceived -= PortGather_LineReceived;
+
+            //logging in changes the delmiter we're looking for...
+            _portGather = new CommunicationGather(_communication, DelimiterIn);
+            _portGather.LineReceived += PortGather_LineReceived;
+
+            Debug.Console(2, this, "sending password {0}", _config.Password);
+            SendLine(_config.Password);
+             
         }
 
         public void SendLine(string data)
@@ -158,7 +180,7 @@ namespace Wattbox.Lib
                 return;
             }
 
-            _communication.SendText(data + DelimiterOut);
+            _communication.SendText(String.Format("{0}{1}", data, DelimiterOut));
 
             if (data.Contains("!OutletSet"))
             {
