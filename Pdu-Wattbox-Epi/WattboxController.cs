@@ -15,7 +15,7 @@ namespace Pdu_Wattbox_Epi
 {
     public class WattboxController : EssentialsBridgeableDevice
     {
-        private const long PollTime = 5000;
+        private const long PollTime = 45000;
         private readonly IWattboxCommunications _comms;
         private readonly Dictionary<int, bool> _isPowerOn;
         private readonly Dictionary<int, bool> _outletEnabled;
