@@ -107,6 +107,12 @@ namespace Wattbox.Lib
         {
             Debug.Console(2, this, "ParseResponse: {0}", data);
 
+            if (data.Contains("#Error"))
+            {
+                Debug.ConsoleWithLog(0, this, "Error Parsing Respone - Verify device config: {0}", data);
+                return;
+            }
+
             if (data.Contains("?OutletStatus="))
             {
                 var outletStatString = data.Substring(14);
@@ -124,19 +130,6 @@ namespace Wattbox.Lib
 
                 return;
             }
-
-            /*
-            else if (data.Contains("?OutletName="))
-            {
-                var outletNameString = data.Substring(12);
-                var outletNameArray = outletNameString.Split(',');
-
-                foreach (var item in from item in Props.Outlets let outlet = item select item)
-                {
-                    OutletName[item.outletNumber] = outletNameArray[item.outletNumber - 1];
-                    OutletNameFeedbacks[item.outletNumber].FireUpdate();
-                }
-            }*/
 
             if (data.Contains("Successfully Logged In"))
             {
