@@ -3,6 +3,7 @@
   <metadata>
     <id>PepperDash.Essentials.Plugin.Wattbox</id>
     <version>1.5.6</version>
+    <readme>docs\README.md</readme>
     <title>Wattbox Essentials Plugin</title>
     <authors>PepperDash Technologies</authors>
     <owners>pepperdash</owners>
@@ -14,7 +15,9 @@
     <tags>crestron 3series 4series</tags>
     <repository type="git" url="https://github.com/PepperDash-Engineering/epi-pdu-wattbox"/>
   </metadata>
-  <files>
-    <file src="**" target="lib\net35"/>
-  </files>
+    <files>
+      <file src="**" target="lib\net35"/>
+      <file src="**" target="lib\net47"/>
+      <file src="README.md" target="docs\"/>
+    </files>
 </package>
