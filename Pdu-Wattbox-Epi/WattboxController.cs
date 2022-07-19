@@ -115,10 +115,16 @@ namespace Pdu_Wattbox_Epi
 
         private void UpdateOutletStatus(List<bool> outletStatus)
         {
-            foreach (var outlet in _props.Outlets)
+            var actual = outletStatus.Count;
+            var configured = _props.Outlets.Count;
+
+            if (configured != actual)
+                Debug.Console(0, this, "The number of configured outlets ({0}) does not match the number of outlets on the device ({1}).", configured, actual);
+
+            for (var i = 0; i < actual; i++)
             {
-                _isPowerOn[outlet.outletNumber] = outletStatus[outlet.outletNumber - 1];
-                IsPowerOnFeedback[outlet.outletNumber].FireUpdate();
+                _isPowerOn[i + 1] = outletStatus[i];
+                IsPowerOnFeedback[i + 1].FireUpdate();
             }
         }
 
