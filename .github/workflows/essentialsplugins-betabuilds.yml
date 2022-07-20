@@ -73,7 +73,7 @@ jobs:
               $newVersionString = "{0}.{1}.{2}-{3}-{4}" -f $newVersion.Major, $newVersion.Minor, ($newVersion.Build + 1), $phase, $Env:GITHUB_RUN_NUMBER
             }
           }      
-          echo "VERSION=$newVersionString OWNER=${{ github.repository_owner }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "VERSION=$newVersionString" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       # Use the version number to set the version of the assemblies
       - name: Update AssemblyInfo.cs
         shell: powershell
@@ -261,15 +261,15 @@ jobs:
         run: nuget sources add -name github -source https://nuget.pkg.github.com/pepperdash/index.json -username Pepperdash -password ${{ secrets.GITHUB_TOKEN }}
       # Pushes to nuget, not needed unless publishing publicly
       - name: Add nuget.org API Key
-        if: ${{github.repository_owner == 'PepperDash'}}
+        if: github.repository_owner == 'PepperDash' && github.repository_visibility == 'public'
         run: nuget setApiKey ${{ secrets.NUGET_API_KEY }}
       - name: Create nuget package
-        if: ${{github.repository_owner == 'PepperDash'}}
+        if: github.repository_owner == 'PepperDash' && github.repository_visibility == 'public'
         run: nuget pack "./${{ env.NUSPEC_FILE}}.nuspec" -version ${{ env.VERSION }}
       - name: Publish nuget package to Github registry
-        if: ${{github.repository_owner == 'PepperDash'}}
+        if: github.repository_owner == 'PepperDash' && github.repository_visibility == 'public'
         run: nuget push **/*.nupkg -source github
       # Pushes to nuget, not needed unless publishing publicly >> this pushes package to nuget.org
       - name: Publish nuget package to nuget.org
-        if: ${{github.repository_owner == 'PepperDash'}}
+        if: github.repository_owner == 'PepperDash' && github.repository_visibility == 'public'
         run: nuget push **/*.nupkg -Source https://api.nuget.org/v3/index.json
