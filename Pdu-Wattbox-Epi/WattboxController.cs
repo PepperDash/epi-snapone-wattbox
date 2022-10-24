@@ -63,6 +63,10 @@ namespace Pdu_Wattbox_Epi
             _props = dc.Properties.ToObject<Properties>();
 
             _useLegacyJoinMap = _props.UseLegacyJoinMap;
+            if (_useLegacyJoinMap)
+            {
+                Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "This configuration uses the legacy joinmaps - these are obsolute - please consider utilizing the updated join maps");
+            }
 
             NameFeedback = new StringFeedback(() => Name);
 
