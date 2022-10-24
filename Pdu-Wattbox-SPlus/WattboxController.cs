@@ -52,26 +52,26 @@ namespace Wattbox
         public void Initialize(STRING key, STRING method, STRING ipAddress, STRING userName, STRING password,
             INTEGER port)
         {
-            Debug.Console(0, this, "Initializing: {0}:{1}:{2}:{3}:{4}:{5}", key, method, ipAddress, userName, password, port);
+            Debug.Console(2, this, "Initializing: {0}:{1}:{2}:{3}:{4}:{5}", key, method, ipAddress, userName, password, port);
             Initialize(key, method,
                 new TcpSshPropertiesConfig {Address = ipAddress, Port = port, Username = userName, Password = password});
         }
 
         public void Initialize(string key, string method, TcpSshPropertiesConfig tcpProperties)
         {
-            Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "Initializing: {0}:{1}:{2}:{3}:{4}:{5}", key, method,
+            Debug.Console(2, this, Debug.ErrorLogLevel.Notice, "Initializing: {0}:{1}:{2}:{3}:{4}:{5}", key, method,
                 tcpProperties.Address,
                 tcpProperties.Username, tcpProperties.Password, tcpProperties.Port);
             Key = key;
 
             if (method.Equals("http", StringComparison.OrdinalIgnoreCase))
             {
-                Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "Creating HTTP Wattbox Client");
+                Debug.Console(1, this, Debug.ErrorLogLevel.Notice, "Creating HTTP Wattbox Client");
                 _comms = new WattboxHttp(String.Format("{0}-http", key), "Wattbox-http", "Basic", tcpProperties);
             }
             else
             {
-                Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "Creating TCP/IP Wattbox Client");
+                Debug.Console(1, this, Debug.ErrorLogLevel.Notice, "Creating TCP/IP Wattbox Client");
                 var comms = new GenericTcpIpClient(String.Format("{0}-tcp", key), tcpProperties.Address,
                     tcpProperties.Port, BufferSize);
                 comms.AutoReconnect = true;
@@ -118,7 +118,7 @@ namespace Wattbox
                 return;
             }
 
-            Debug.Console(2, this, Debug.ErrorLogLevel.Notice, "Stopping Poll timer. {0}:{1}", DueTime, PollTime);
+            //Debug.Console(2, this, Debug.ErrorLogLevel.Notice, "Stopping Poll timer. {0}:{1}", DueTime, PollTime);
 
             _pollTimer.Stop();
             _pollTimer.Dispose();
@@ -127,14 +127,14 @@ namespace Wattbox
 
         public void SetOutlet(INTEGER index, INTEGER action)
         {
-            Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "Setting outlet {0} to action {1}", index, action);
+            Debug.Console(2, this, Debug.ErrorLogLevel.Notice, "Setting outlet {0} to action {1}", index, action);
             _comms.SetOutlet(index, action);
         }
 
         public void GetStatus()
         {
             if (_comms == null) return;
-            Debug.Console(2, this, "Polling for status");
+            //Debug.Console(2, this, "Polling for status");
             _comms.GetStatus();
         }
 

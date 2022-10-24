@@ -8,13 +8,16 @@ using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Config;
+using PepperDash_Essentials_Core.Devices;
 using Wattbox.Lib;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace Pdu_Wattbox_Epi
 {
-    public class WattboxController : EssentialsBridgeableDevice
+    public class WattboxController : EssentialsBridgeableDevice, IHasControlledPowerOutlets
     {
+        
+
         private const long PollTime = 45000;
         private readonly IWattboxCommunications _comms;
         private readonly Dictionary<int, bool> _isPowerOn;
@@ -22,6 +25,10 @@ namespace Pdu_Wattbox_Epi
         private readonly Dictionary<int, string> _outletName;
         private readonly Properties _props;
         public FeedbackCollection<Feedback> Feedbacks;
+
+        private bool _useLegacyJoinMap;
+
+        public ReadOnlyDictionary<int, IHasPowerCycle> PduOutlets { get; private set; } 
 
         public BoolFeedback IsOnlineFeedback;
 
@@ -55,30 +62,40 @@ namespace Pdu_Wattbox_Epi
 
             _props = dc.Properties.ToObject<Properties>();
 
+            _useLegacyJoinMap = _props.UseLegacyJoinMap;
+
             NameFeedback = new StringFeedback(() => Name);
 
             Feedbacks.Add(NameFeedback);
+            var outletDictionary = new Dictionary<int, IHasPowerCycle>();
 
             Debug.Console(2, this, "There are {0} outlets for {1}", _props.Outlets.Count(), Name);
             foreach (var item in _props.Outlets)
             {
                 var i = item;
-                Debug.Console(2, this, "The Outlet's name is {0} and it has an index of {1}", i.name, i.outletNumber);
-                _outletEnabled.Add(i.outletNumber, i.enabled);
-                _isPowerOn.Add(i.outletNumber, false);
-                _outletName.Add(i.outletNumber, i.name);
-                var isPowerOnFeedback = new BoolFeedback(() => _isPowerOn[i.outletNumber]);
-                var outletEnabledFeedback = new BoolFeedback(() => _outletEnabled[i.outletNumber]);
-                var outletNameFeedback = new StringFeedback(() => _outletName[i.outletNumber]);
+
+                var newOutlet = new WattboxOutlet(String.Format("{0}-{1}", this.Key, i.Name), i.Name, i.OutletNumber, 0,
+                    _comms);
+
+                Debug.Console(2, this, "The Outlet's name is {0} and it has an index of {1}", i.Name, i.OutletNumber);
+                _outletEnabled.Add(newOutlet.OutletNumber, i.Enabled);
+                var isPowerOnFeedback = newOutlet.PowerIsOnFeedback;
+                var outletEnabledFeedback = new BoolFeedback(() => _outletEnabled[newOutlet.OutletNumber]);
+                var outletNameFeedback = new StringFeedback(() => newOutlet.Name);
 
 
-                IsPowerOnFeedback.Add(i.outletNumber, isPowerOnFeedback);
-                OutletEnabledFeedbacks.Add(i.outletNumber, outletEnabledFeedback);
-                OutletNameFeedbacks.Add(i.outletNumber, outletNameFeedback);
+                IsPowerOnFeedback.Add(newOutlet.OutletNumber, isPowerOnFeedback);
+                OutletEnabledFeedbacks.Add(newOutlet.OutletNumber, outletEnabledFeedback);
+                OutletNameFeedbacks.Add(newOutlet.OutletNumber, outletNameFeedback);
                 Feedbacks.Add(isPowerOnFeedback);
                 Feedbacks.Add(outletEnabledFeedback);
                 Feedbacks.Add(outletNameFeedback);
+                outletDictionary.Add(newOutlet.OutletNumber, newOutlet);
+                
             }
+
+            PduOutlets = new ReadOnlyDictionary<int, IHasPowerCycle>(outletDictionary);
+
 
             var control = CommFactory.GetControlPropertiesConfig(dc);
 
@@ -164,7 +181,9 @@ namespace Pdu_Wattbox_Epi
 
         public override void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
         {
-            var joinMap = new WattboxJoinMap(joinStart);
+            var joinMap = _useLegacyJoinMap ? new WattboxJoinMap(joinStart) : new PduJoinMapBase(joinStart);
+
+
 
             if (bridge != null)
             {
@@ -177,27 +196,27 @@ namespace Pdu_Wattbox_Epi
 
             IsOnlineFeedback.LinkInputSig(trilist.BooleanInput[joinMap.Online.JoinNumber]);
 
-            NameFeedback.LinkInputSig(trilist.StringInput[joinMap.DeviceName.JoinNumber]);
+            NameFeedback.LinkInputSig(trilist.StringInput[joinMap.Name.JoinNumber]);
             Debug.Console(2, this, "There are a total of {0} Power On Feedbacks", IsPowerOnFeedback.Count());
             foreach (var item in _props.Outlets)
             {
                 var o = item;
-                var x = (item.outletNumber - 1)*4;
+                var x = (item.OutletNumber - 1)*4;
                 Debug.Console(2, this, "x = {0}", x);
 
-                OutletEnabledFeedbacks[o.outletNumber].LinkInputSig(
-                    trilist.BooleanInput[joinMap.Enabled.JoinNumber + (ushort) x]);
-                OutletNameFeedbacks[o.outletNumber].LinkInputSig(
+                OutletEnabledFeedbacks[o.OutletNumber].LinkInputSig(
+                    trilist.BooleanInput[joinMap.OutletEnabled.JoinNumber + (ushort) x]);
+                OutletNameFeedbacks[o.OutletNumber].LinkInputSig(
                     trilist.StringInput[joinMap.OutletName.JoinNumber + (ushort) x]);
-                IsPowerOnFeedback[o.outletNumber].LinkInputSig(
-                    trilist.BooleanInput[joinMap.PowerOn.JoinNumber + (ushort) x]);
-                IsPowerOnFeedback[o.outletNumber].LinkComplementInputSig(
-                    trilist.BooleanInput[joinMap.PowerOff.JoinNumber + (ushort) x]);
+                IsPowerOnFeedback[o.OutletNumber].LinkInputSig(
+                    trilist.BooleanInput[joinMap.OutletPowerOn.JoinNumber + (ushort) x]);
+                IsPowerOnFeedback[o.OutletNumber].LinkComplementInputSig(
+                    trilist.BooleanInput[joinMap.OutletPowerOff.JoinNumber + (ushort) x]);
 
-                trilist.SetSigTrueAction((joinMap.PowerReset.JoinNumber + (ushort) x),
-                    () => SetOutlet(o.outletNumber, 3));
-                trilist.SetSigTrueAction((joinMap.PowerOn.JoinNumber + (ushort) x), () => SetOutlet(o.outletNumber, 1));
-                trilist.SetSigTrueAction((joinMap.PowerOff.JoinNumber + (ushort) x), () => SetOutlet(o.outletNumber, 0));
+                trilist.SetSigTrueAction((joinMap.OutletPowerCycle.JoinNumber + (ushort) x),
+                    () => SetOutlet(o.OutletNumber, 3));
+                trilist.SetSigTrueAction((joinMap.OutletPowerOn.JoinNumber + (ushort)x), () => SetOutlet(o.OutletNumber, 1));
+                trilist.SetSigTrueAction((joinMap.OutletPowerOff.JoinNumber + (ushort)x), () => SetOutlet(o.OutletNumber, 0));
             }
 
             trilist.OnlineStatusChange += (d, args) =>
@@ -212,6 +231,8 @@ namespace Pdu_Wattbox_Epi
                 }
             };
         }
+
+
 
         #region Overrides of Device
 

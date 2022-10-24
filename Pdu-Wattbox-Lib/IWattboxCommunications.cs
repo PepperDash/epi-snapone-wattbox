@@ -8,6 +8,7 @@ namespace Wattbox.Lib
 
     public delegate void LoggedInStatusUpdate(bool status);
 
+
     public interface IWattboxCommunications
     {
         bool IsLoggedIn { get; set; }

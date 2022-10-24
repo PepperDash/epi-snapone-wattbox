@@ -1,11 +1,12 @@
 ﻿using PepperDash.Essentials.Core;
+using PepperDash.Essentials.Core.Bridges;
 
 namespace Pdu_Wattbox_Epi.Bridge.JoinMaps
 {
-    public class WattboxJoinMap : JoinMapBaseAdvanced
+    public class WattboxJoinMap : PduJoinMapBase
     {
 
-        [JoinName("Online")] public JoinDataComplete Online =
+        [JoinName("Online")] public new JoinDataComplete Online =
             new JoinDataComplete(new JoinData() {JoinNumber = 1, JoinSpan = 1},
                 new JoinMetadata()
                 {
@@ -14,25 +15,27 @@ namespace Pdu_Wattbox_Epi.Bridge.JoinMaps
                     JoinType = eJoinType.Digital
                 });
 
-        [JoinName("Enabled")] public JoinDataComplete Enabled =
+        [JoinName("Enabled")] public new JoinDataComplete OutletEnabled =
             new JoinDataComplete(new JoinData() {JoinNumber = 2, JoinSpan = 1},
                 new JoinMetadata()
                 {
-                    Description = "Power Reset",
+                    Description = "Outlet Enabled",
                     JoinCapabilities = eJoinCapabilities.ToSIMPL,
                     JoinType = eJoinType.Digital
                 });
 
-        [JoinName("PowerReset")] public JoinDataComplete PowerReset =
+        [JoinName("OutletPowerCycle")]
+        public new JoinDataComplete OutletPowerCycle =
             new JoinDataComplete(new JoinData() {JoinNumber = 3, JoinSpan = 1},
                 new JoinMetadata()
                 {
-                    Description = "Power Reset",
+                    Description = "Outlet Power Cycle",
                     JoinCapabilities = eJoinCapabilities.FromSIMPL,
                     JoinType = eJoinType.Digital
                 });
 
-        [JoinName("PowerOn")] public JoinDataComplete PowerOn =
+        [JoinName("OutletPowerOn")]
+        public new JoinDataComplete OutletPowerOn =
             new JoinDataComplete(new JoinData() {JoinNumber = 4, JoinSpan = 1},
                 new JoinMetadata()
                 {
@@ -41,16 +44,17 @@ namespace Pdu_Wattbox_Epi.Bridge.JoinMaps
                     JoinType = eJoinType.Digital
                 });
 
-        [JoinName("PowerOff")] public JoinDataComplete PowerOff =
+        [JoinName("OutletPowerOff")]
+        public new JoinDataComplete OutletPowerOff =
             new JoinDataComplete(new JoinData() {JoinNumber = 5, JoinSpan = 1},
                 new JoinMetadata()
                 {
-                    Description = "Power Off Trigger and Feedback",
+                    Description = "Outlet Power On",
                     JoinCapabilities = eJoinCapabilities.ToFromSIMPL,
                     JoinType = eJoinType.Digital
                 });
 
-        [JoinName("DeviceName")] public JoinDataComplete DeviceName =
+        [JoinName("Name")] public new JoinDataComplete Name =
             new JoinDataComplete(new JoinData() {JoinNumber = 1, JoinSpan = 1},
                 new JoinMetadata()
                 {
@@ -59,13 +63,13 @@ namespace Pdu_Wattbox_Epi.Bridge.JoinMaps
                     JoinType = eJoinType.Digital
                 });
 
-        [JoinName("OutletName")] public JoinDataComplete OutletName =
+        [JoinName("OutletName")] public new JoinDataComplete OutletName =
             new JoinDataComplete(new JoinData() {JoinNumber = 2, JoinSpan = 1},
                 new JoinMetadata()
                 {
                     Description = "Device Online",
                     JoinCapabilities = eJoinCapabilities.ToSIMPL,
-                    JoinType = eJoinType.Digital
+                    JoinType = eJoinType.Serial
                 });
 
         public WattboxJoinMap(uint joinStart)
