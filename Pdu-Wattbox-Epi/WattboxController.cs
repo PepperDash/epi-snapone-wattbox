@@ -3,13 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.DeviceSupport;
-using Pdu_Wattbox_Epi.Bridge.JoinMaps;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Config;
 using PepperDash_Essentials_Core.Devices;
-using PepperDash.Essentials.Core.Devices;
 using Wattbox.Lib;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
@@ -44,16 +42,16 @@ namespace Pdu_Wattbox_Epi
             _comms.UpdateLoggedInStatus = UpdateLoggedInStatus;
             TempDict = new Dictionary<int, IHasPowerCycle>();
 
-
-            _props = dc.Properties.ToObject<Properties>();
-
+            if (dc.Properties != null) _props = dc.Properties.ToObject<Properties>();
 
 
             Debug.Console(2, this, "There are {0} outlets for {1}", _props.Outlets.Count(), Name);
             foreach (var item in _props.Outlets)
             {
                 var i = item;
-                TempDict.Add(i.outletNumber, new WattboxOutlet(i.outletNumber, i.name, i.enabled, this));
+                var outlet = new WattboxOutlet(i.OutletNumber, i.Name, i.Enabled, this);
+                TempDict.Add(i.OutletNumber, outlet);
+                DeviceManager.AddDevice(outlet);
             }
             PduOutlets = new ReadOnlyDictionary<int, IHasPowerCycle>(TempDict);
             OutletCount = PduOutlets.Count;
@@ -201,8 +199,8 @@ namespace Pdu_Wattbox_Epi
 
     public enum EWattboxOutletSet
     {
-        PowerOn  = 0,
-        PowerOff,
+        PowerOff  = 0,
+        PowerOn,
         PowerCycle
     }
 }
