@@ -11,7 +11,7 @@ namespace Pdu_Wattbox_Epi
     {
         public WattboxFactory()
         {
-            MinimumEssentialsFrameworkVersion = "1.6.1";
+            MinimumEssentialsFrameworkVersion = "1.12.2";
 
             TypeNames = new List<string> {"wattbox"};
         }
