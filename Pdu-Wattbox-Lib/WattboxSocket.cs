@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Crestron.SimplSharp;
 using PepperDash.Core;
@@ -8,7 +9,7 @@ namespace Wattbox.Lib
     public class WattboxSocket : IWattboxCommunications, IKeyed
     {
         private const string DelimiterOut = "\x0A";
-        private const string DelimiterIn = "\x0A";
+        private const string DelimiterIn = "\x0D\x0A";
         private const string DelimiterUsername = ": ";
         private readonly IBasicCommunication _communication;
         private readonly TcpSshPropertiesConfig _config;
@@ -30,7 +31,15 @@ namespace Wattbox.Lib
                 socket.ConnectionChange += socket_ConnectionChange;
             }
 
-            _portGather = new CommunicationGather(_communication, DelimiterUsername);
+            if (_communication is GenericSshClient)
+            {
+                _portGather = new CommunicationGather(_communication, DelimiterIn);
+            }
+            else
+            {
+                _portGather = new CommunicationGather(_communication, DelimiterUsername);
+            }
+            
             _portGather.LineReceived += PortGather_LineReceived;
 
             //AddPostActivationAction(Communication.Connect);
@@ -117,7 +126,7 @@ namespace Wattbox.Lib
             {
                 var outletStatString = data.Substring(14);
                 Debug.Console(2, this, "state substring: {0}", outletStatString);
-                var outletStatusArray = outletStatString.Split(',').Select(s => s == "1").ToList();
+                var outletStatusList = outletStatString.Split(',').Select(s => s == "1").ToList();
 
                 var handler = UpdateOutletStatus;
 
@@ -126,7 +135,7 @@ namespace Wattbox.Lib
                     return;
                 }
 
-                handler(outletStatusArray);
+                handler(outletStatusList);
 
                 return;
             }
