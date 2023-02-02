@@ -34,7 +34,7 @@ namespace Pdu_Wattbox_Epi
             _parent = parent;
             _index = index;
             Enabled = enabled;
-            Key = String.Format("{0}-Outlet{1}", _parent.Key, _index);
+            Key = String.Format("{0}-{1}", _parent.Key, name);
             Name = name;
             //this doesn't matter!!!!
             PowerCycleTimeMs = 12345;
