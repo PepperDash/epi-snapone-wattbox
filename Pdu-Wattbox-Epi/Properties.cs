@@ -9,7 +9,6 @@ namespace Pdu_Wattbox_Epi {
         public WattboxControlProperties Control { get; set; }
         [JsonProperty("authType")]
         public string AuthType { get; set; }
-
         [JsonProperty("outlets")]
         public List<Outlet> Outlets {get; set;}
     }

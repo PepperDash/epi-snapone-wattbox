@@ -60,7 +60,7 @@ namespace Pdu_Wattbox_Epi
 
             if (control.Method == eControlMethod.Http || control.Method == eControlMethod.Https)
             {
-                _pollTimer = new CTimer((o) => GetStatus(), null, 0, PollTime);
+                _pollTimer = new CTimer(o => GetStatus(), null, 0, PollTime);
             }
 
             CrestronEnvironment.ProgramStatusEventHandler += type =>
@@ -97,7 +97,7 @@ namespace Pdu_Wattbox_Epi
 
             if (_pollTimer == null)
             {
-                _pollTimer = new CTimer((o) => GetStatus(), null, 0, PollTime);
+                _pollTimer = new CTimer(o => GetStatus(), null, 0, PollTime);
             }
         }
 
@@ -151,6 +151,11 @@ namespace Pdu_Wattbox_Epi
         {
             var joinMap = new PduJoinMapBase(joinStart);
 
+            var customJoins = JoinMapHelper.TryGetJoinMapAdvancedForDevice(joinMapKey);
+
+            if (customJoins != null)
+                joinMap.SetCustomJoinData(customJoins);
+
             if (bridge != null)
             {
                 bridge.AddJoinMap(Key, joinMap);
@@ -164,13 +169,10 @@ namespace Pdu_Wattbox_Epi
 
             NameFeedback.LinkInputSig(trilist.StringInput[joinMap.Name.JoinNumber]);
 
-            foreach (var outlet in PduOutlets)
+            foreach (var o in PduOutlets.Select(outlet => outlet.Value).OfType<WattboxOutlet>())
             {
-                var o = outlet.Value as WattboxOutlet;
-                if (o == null) continue;
                 o.LinkOutlet(trilist, joinMap);
             }
-
 
             trilist.OnlineStatusChange += (d, args) =>
             {
