@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using Crestron.SimplSharp;
 using PepperDash.Core;
-using PepperDash.Core.WebApi.Presets;
 using Wattbox.Lib;
 using STRING = System.String;
 using SSTRING = Crestron.SimplSharp.SimplSharpString;
@@ -67,15 +66,13 @@ namespace Wattbox
             if (method.Equals("http", StringComparison.OrdinalIgnoreCase))
             {
                 Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "Creating HTTP Wattbox Client");
-                _comms = new WattboxHttp(String.Format("{0}-http", key), "Wattbox-http", "Basic", tcpProperties);
+                _comms = new WattboxHttp(String.Format("{0}-http", key), String.Format("{0}-http", key), "Basic", tcpProperties);
             }
             else
             {
                 Debug.Console(0, this, Debug.ErrorLogLevel.Notice, "Creating TCP/IP Wattbox Client");
                 var comms = new GenericTcpIpClient(String.Format("{0}-tcp", key), tcpProperties.Address,
-                    tcpProperties.Port, BufferSize);
-                comms.AutoReconnect = true;
-                comms.AutoReconnectIntervalMs = 10000;
+                    tcpProperties.Port, BufferSize) {AutoReconnect = true, AutoReconnectIntervalMs = 10000};
                 _comms = new WattboxSocket(String.Format("{0}-socket", key), "Wattbox-tcp", comms, tcpProperties);
             }
 
@@ -108,7 +105,7 @@ namespace Wattbox
             }
 
             Debug.Console(2, this, Debug.ErrorLogLevel.Notice, "Starting Poll timer. {0}:{1}", DueTime, PollTime);
-            _pollTimer = new CTimer((o) => GetStatus(),null, DueTime, PollTime);
+            _pollTimer = new CTimer(o => GetStatus(),null, DueTime, PollTime);
         }
 
         private void StopTimer()
