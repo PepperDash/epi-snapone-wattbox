@@ -4,7 +4,7 @@ name: Beta Build
 on: 
   push:
     branches-ignore: 
-      - $default-branch
+      - main
 
   workflow_dispatch: 
     inputs: 
@@ -19,4 +19,4 @@ jobs:
     secrets: inherit
     with: 
       branch: ${{ inputs.branch }}
-      default-branch: $default-branch
+      default-branch: main
