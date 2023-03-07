@@ -1,26 +1,33 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.DeviceSupport;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Config;
+using PepperDash.Essentials.Core.DeviceInfo;
 using PepperDash_Essentials_Core.Devices;
 using Wattbox.Lib;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace Pdu_Wattbox_Epi
 {
-    public class WattboxController : EssentialsBridgeableDevice, IHasControlledPowerOutlets
+    public class WattboxController : EssentialsBridgeableDevice, IHasControlledPowerOutlets, IDeviceInfoProvider
     {
         private const long PollTime = 45000;
         private readonly IWattboxCommunications _comms;
         private readonly Properties _props;
         public FeedbackCollection<Feedback> Feedbacks;
         public ReadOnlyDictionary<int, IHasPowerCycle> PduOutlets { get; set; }
-        private  Dictionary<int, IHasPowerCycle> TempDict { get; set; }
+        private Dictionary<int, IHasPowerCycle> TempDict { get; set; }
+        public WattboxStatusMonitor WattboxStatusMonitor;
+
+        public DeviceInfo DeviceInfo { get; private set; }
+
 
         public readonly int OutletCount;
 
@@ -40,6 +47,12 @@ namespace Pdu_Wattbox_Epi
             _comms.UpdateOutletStatus = UpdateOutletStatus;
             _comms.UpdateOnlineStatus = UpdateOnlineStatus;
             _comms.UpdateLoggedInStatus = UpdateLoggedInStatus;
+            _comms.UpdateFirmwareVersion = UpdateFirmwareVersion;
+            _comms.UpdateSerial = UpdateSerial;
+            _comms.UpdateHostname = UpdateHostname;
+
+            DeviceInfo = new DeviceInfo();
+
             TempDict = new Dictionary<int, IHasPowerCycle>();
 
             if (dc.Properties != null) _props = dc.Properties.ToObject<Properties>();
@@ -82,7 +95,8 @@ namespace Pdu_Wattbox_Epi
                 OutletCountFeedback
             };
 
-
+            WattboxStatusMonitor = new WattboxStatusMonitor(this, 90000, 180000);
+            DeviceManager.AddDevice(WattboxStatusMonitor);
         }
 
         private void UpdateLoggedInStatus(bool status)
@@ -122,6 +136,7 @@ namespace Pdu_Wattbox_Epi
         {
             try
             {
+                WattboxStatusMonitor.IsOnline = online;
                 IsOnlineFeedback.FireUpdate();
             }
             catch (Exception ex)
@@ -131,6 +146,95 @@ namespace Pdu_Wattbox_Epi
             }
             
         }
+
+        private void UpdateFirmwareVersion(string firmware)
+        {
+            if (DeviceInfo == null) return;
+            DeviceInfo.FirmwareVersion = firmware;
+            UpdateDeviceInfo();
+        }
+        private void UpdateHostname(string hostname)
+        {
+            if (DeviceInfo == null) return;
+            DeviceInfo.HostName = hostname;
+            var isIpAddress = CheckIp(hostname);
+            DeviceInfo.IpAddress = isIpAddress ? hostname : GetIpAddress(hostname);
+            DeviceInfo.MacAddress = isIpAddress ? GetMacAddress(hostname) : "00:00:00:00:00:00";
+            UpdateDeviceInfo();
+        }
+        private void UpdateSerial(string serial)
+        {
+            if (DeviceInfo == null) return;
+            DeviceInfo.SerialNumber = serial;
+            UpdateDeviceInfo();
+        }
+
+        private string GetIpAddress(string hostname)
+        {
+            const string threeSeriesPattern = @"(?<=\[).+?(?=\])";
+            const string fourSeriesPattern = @"(?<=\().+?(?=\))";
+            var response = String.Empty;
+            var cmd = String.Format("ping -n1 {0}", hostname);
+            CrestronConsole.SendControlSystemCommand(cmd, ref response);
+
+            Debug.Console(2, this, "Ping Response = {0}", response);
+
+            var regex = new Regex(Global.ProcessorSeries == eCrestronSeries.Series3
+                ? threeSeriesPattern
+                : fourSeriesPattern);
+            var match = regex.Match(response);
+            return match != null ? match.ToString() : String.Empty;
+        }
+
+        private string GetMacAddress(string ipAddress)
+        {
+            const string macAddressPattern = @"([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})";
+            var regex = new Regex(macAddressPattern);
+            var response = String.Empty;
+            CrestronConsole.SendControlSystemCommand("ShowArpTable", ref response);
+
+            Debug.Console(2, this, "ARP Response = {0}", response);
+
+            var addressToSearch = ipAddress;
+            if (Global.ProcessorSeries == eCrestronSeries.Series3)
+            {
+                var octets = ipAddress.Split('.');
+                var sb = new StringBuilder();
+                foreach (var octet in octets)
+                {
+                    sb.Append(octet.PadLeft(3, ' ') + ".");
+                }
+                sb.Length--;
+                addressToSearch = sb.ToString();
+            }
+            var substring = response.Substring(response.IndexOf(addressToSearch, StringComparison.Ordinal));
+            var match = regex.Match(substring);
+            return match != null ? match.ToString() : String.Empty;
+
+        }
+
+        public bool CheckIp(string data)
+        {
+            try
+            {
+                IPAddress.Parse(data);
+                return true;
+
+            }
+            catch (Exception e)
+            {
+                var ex = e as FormatException;
+                if (ex != null)
+                {
+                    Debug.Console(2, this, "{0} is not a valid IP Address", data);
+                }
+                return false;
+            }
+        }
+
+
+
+
 
         public void GetStatus()
         {
@@ -169,9 +273,12 @@ namespace Pdu_Wattbox_Epi
 
             NameFeedback.LinkInputSig(trilist.StringInput[joinMap.Name.JoinNumber]);
 
-            foreach (var o in PduOutlets.Select(outlet => outlet.Value).OfType<WattboxOutlet>())
+            if ((int)joinMap.OutletName.JoinNumber - (int)joinStart > 0)
             {
-                o.LinkOutlet(trilist, joinMap);
+                foreach (var o in PduOutlets.Select(outlet => outlet.Value).OfType<WattboxOutlet>())
+                {
+                    o.LinkOutlet(trilist, joinMap);
+                }
             }
 
             trilist.OnlineStatusChange += (d, args) =>
@@ -197,6 +304,21 @@ namespace Pdu_Wattbox_Epi
 
         #endregion
 
+
+        #region IDeviceInfoProvider Members
+
+
+
+        public event DeviceInfoChangeHandler DeviceInfoChanged;
+
+        public void UpdateDeviceInfo()
+        {
+            var handler = DeviceInfoChanged;
+            if (handler == null) return;
+            handler(this, new DeviceInfoEventArgs(DeviceInfo));
+        }
+
+        #endregion
     }
 
     public enum EWattboxOutletSet

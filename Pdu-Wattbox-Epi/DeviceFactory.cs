@@ -29,17 +29,26 @@ namespace Pdu_Wattbox_Epi
 
             IWattboxCommunications comms;
 
-            if (controlProperties.Method == eControlMethod.Http)
+            var method = controlProperties.Method;
+
+            var methodString = method.ToString();
+
+            var newKey = String.Format("{0}-{1}", dc.Key, methodString);
+            var newName = String.Format("{0}-{1}", dc.Name, methodString);
+
+            if (method == eControlMethod.Http || method == eControlMethod.Https)
             {
                 Debug.Console(1, "Creating Wattbox using HTTP Comms");
-                comms = new WattboxHttp(String.Format("{0}-http", dc.Key), String.Format("{0}-http", dc.Name),
+                comms = new WattboxHttp(newKey, newName,
                     "Basic", controlProperties.TcpSshProperties);
+                DeviceManager.AddDevice(comms);
+
             }
             else
             {
                 Debug.Console(1, "Creating Wattbox using TCP/IP Comms");
                 var comm = CommFactory.CreateCommForDevice(dc);
-                comms = new WattboxSocket(String.Format("{0}-tcp", dc.Key), String.Format("{0}-tcp", dc.Name), comm,
+                comms = new WattboxSocket(newKey, newName, comm,
                     controlProperties.TcpSshProperties);
             }
 

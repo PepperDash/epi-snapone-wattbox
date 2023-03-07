@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Linq;
+using Crestron.SimplSharp;
 using PepperDash.Core;
+
 
 namespace Wattbox.Lib
 {
-    public class WattboxSocket : IWattboxCommunications, IKeyed
+    public class WattboxSocket : IWattboxCommunications
     {
         private const string DelimiterOut = "\x0A";
         private const string DelimiterIn = "\x0D\x0A";
@@ -12,6 +14,8 @@ namespace Wattbox.Lib
         private readonly IBasicCommunication _communication;
         private readonly TcpSshPropertiesConfig _config;
         private CommunicationGather _portGather;
+        private CTimer _deviceInfoTimer;
+
 
         public WattboxSocket(string key, string name, IBasicCommunication comm, TcpSshPropertiesConfig tcpProperties)
         {
@@ -58,6 +62,10 @@ namespace Wattbox.Lib
         public OutletStatusUpdate UpdateOutletStatus { get; set; }
         public OnlineStatusUpdate UpdateOnlineStatus { get; set; }
         public LoggedInStatusUpdate UpdateLoggedInStatus { get; set; }
+        public FirmwareVersionUpdate UpdateFirmwareVersion { get; set; }
+        public SerialUpdate UpdateSerial { get; set; }
+        public HostnameUpdate UpdateHostname { get; set; }
+
 
         public void SetOutlet(int outletNumber, int outletStatus)
         {
@@ -127,15 +135,42 @@ namespace Wattbox.Lib
                 var outletStatusList = outletStatString.Split(',').Select(s => s == "1").ToList();
 
                 var handler = UpdateOutletStatus;
-
-                if (handler == null)
-                {
-                    return;
-                }
-
-                handler(outletStatusList);
+                if (handler != null) handler(outletStatusList);
 
                 return;
+            }
+
+            if (data.Contains("?Hostname="))
+            {
+                var hostnameString = data.Substring(10);
+                Debug.Console(2, this, "Hostname : {0}", hostnameString);
+                var handler = UpdateHostname;
+                if (handler != null) handler(hostnameString);
+
+                _deviceInfoTimer = new CTimer(SendLine, "?ServiceTag", 250);
+            }
+
+            if (data.Contains("?ServiceTag="))
+            {
+                var serialString = data.Substring(12);
+                Debug.Console(2, this, "Serial : {0}", serialString);
+                var handler = UpdateSerial;
+                if (handler != null) handler(serialString);
+
+                _deviceInfoTimer = new CTimer(SendLine, "?Firmware", 250);
+
+
+            }
+
+            if (data.Contains("?Firmware="))
+            {
+                var firmwareString = data.Substring(10);
+                Debug.Console(2, this, "Firmware : {0}", firmwareString);
+                var handler = UpdateFirmwareVersion;
+                if (handler != null) handler(firmwareString);
+
+                _deviceInfoTimer.Dispose();
+
             }
 
             if (data.Contains("Successfully Logged In"))
@@ -170,8 +205,24 @@ namespace Wattbox.Lib
 
             Debug.Console(2, this, "sending password {0}", _config.Password);
             SendLine(_config.Password);
-             
+
         }
+
+        public void SendLine(object data)
+        {
+            var cmd = data as String;
+            if (cmd == null || String.IsNullOrEmpty(cmd)) return;
+
+            _communication.SendText(String.Format("{0}{1}", data, DelimiterOut));
+
+            if (cmd.Contains("!OutletSet"))
+            {
+                GetStatus();
+            }
+
+        }
+
+
 
         public void SendLine(string data)
         {

@@ -7,7 +7,7 @@ using PepperDash.Core;
 
 namespace Wattbox.Lib
 {
-    public class WattboxHttp : IWattboxCommunications, IKeyed
+    public class WattboxHttp : IWattboxCommunications
     {
         private readonly string _authorization;
         private readonly HttpClient _client = new HttpClient();
@@ -46,6 +46,10 @@ namespace Wattbox.Lib
         public OutletStatusUpdate UpdateOutletStatus { get; set; }
         public OnlineStatusUpdate UpdateOnlineStatus { get; set; }
         public LoggedInStatusUpdate UpdateLoggedInStatus { get; set; }
+        public FirmwareVersionUpdate UpdateFirmwareVersion { get; set; }
+        public SerialUpdate UpdateSerial { get; set; }
+        public HostnameUpdate UpdateHostname { get; set; }
+
         public bool IsLoggedIn { get; set; }
         public bool IsOnline { get; set; }
 
@@ -115,14 +119,7 @@ namespace Wattbox.Lib
 
                     Debug.Console(2, "{0}:{1}", url, responseCode);
 
-                    IsOnline = responseCode == 200;
-
-                    var handler = UpdateOnlineStatus;
-
-                    if (handler != null)
-                    {
-                        handler(IsOnline);
-                    }
+                    IsOnline = (responseCode == 200 && responseCode != 401);
 
                     if (!String.IsNullOrEmpty(response.ContentString))
                     {
@@ -137,8 +134,28 @@ namespace Wattbox.Lib
             catch (Exception e)
             {
                 Debug.Console(2, this, "Exception in HTTP Request : {0}", e.Message);
+                if (e.Message.ToLower().Contains("unauthorized") || e.Message.ToLower().Contains("401"))
+                    IsOnline = false;
+
                 Debug.Console(2, this, "Stack Trace: {0}", e.StackTrace);
             }
+            finally
+            {
+                Debug.Console(0, this, "Reached finally and IsOnline =  {0}", IsOnline);
+                var handler = UpdateOnlineStatus;
+
+                if (handler != null)
+                {
+                    Debug.Console(0, this, "UpdateOnlineStatus Handler is Not Null and IsOnline =  {0}", IsOnline);
+                    handler(IsOnline);
+                }
+                else
+                {
+                    Debug.Console(0, this, "UpdateOnlineStatus Handler is Null and IsOnline =  {0}", IsOnline);
+
+                }
+            }
+
         }
 
         public void ParseResponse(string data)
@@ -148,9 +165,19 @@ namespace Wattbox.Lib
             {
                 var xml = XElement.Parse(data);
 
-                var result = xml.Element("outlet_status").Value;
+                var hostnameString = xml.Element("host_name").Value;
+                var hostnameHandler = UpdateHostname;
+                if (hostnameHandler != null) hostnameHandler(hostnameString);
 
-                //var result2 = result.Element("outlet_status").Value;
+                var deviceModel = xml.Element("hardware_version").Value;
+                var deviceModelHandler = UpdateFirmwareVersion;
+                if (UpdateFirmwareVersion != null) deviceModelHandler(deviceModel);
+
+                var serial = xml.Element("serial_number").Value;
+                var serialHandler = UpdateSerial;
+                if (UpdateSerial != null) serialHandler(serial);
+
+                var result = xml.Element("outlet_status").Value;
 
                 var outletStatus = result.Split(',').Select(s => s == "1").ToList();
 
