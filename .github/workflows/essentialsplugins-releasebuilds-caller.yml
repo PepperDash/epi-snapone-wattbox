@@ -2,7 +2,8 @@ name: Beta Build
 
 on: 
   push:
-    - "main"
+    branches: 
+      - $default-branch
 
   workflow_dispatch: 
     inputs: 
