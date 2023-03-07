@@ -1,9 +1,11 @@
 name: Release Build
 
-on: 
-  push:
-    branches: 
-      - $default-branch
+on:
+  release:
+    types:
+      - released
+    branches:
+      - main
 
   workflow_dispatch: 
     inputs: 
