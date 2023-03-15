@@ -27,21 +27,24 @@ namespace Pdu_Wattbox_Epi
 
             Debug.Console(1, "Wattbox control method: {0}", controlProperties.Method);
 
-            IWattboxCommunications comms;
+            IWattboxCommunications internalComms;
 
             if (controlProperties.Method == eControlMethod.Http)
             {
                 Debug.Console(1, "Creating Wattbox using HTTP Comms");
-                comms = new WattboxHttp(String.Format("{0}-http", dc.Key), String.Format("{0}-http", dc.Name),
+                internalComms = new WattboxHttp(String.Format("{0}-http", dc.Key), String.Format("{0}-http", dc.Name),
                     "Basic", controlProperties.TcpSshProperties);
             }
             else
             {
                 Debug.Console(1, "Creating Wattbox using TCP/IP Comms");
                 var comm = CommFactory.CreateCommForDevice(dc);
-                comms = new WattboxSocket(String.Format("{0}-tcp", dc.Key), String.Format("{0}-tcp", dc.Name), comm,
+                internalComms = new WattboxSocket(String.Format("{0}-tcp", dc.Key), String.Format("{0}-tcp", dc.Name), comm,
                     controlProperties.TcpSshProperties);
             }
+            var control = CommFactory.GetControlPropertiesConfig(dc);
+
+            var comms = new WattboxCommunicationMonitor(internalComms, 90000, 180000, internalComms, 0, control.Method);
 
             return new WattboxController(dc.Key, dc.Name, comms, dc);
         }

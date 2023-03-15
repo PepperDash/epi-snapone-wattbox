@@ -1,17 +1,19 @@
 ﻿using System;
 using System.Linq;
+using Crestron.SimplSharp;
 using PepperDash.Core;
 
 namespace Wattbox.Lib
 {
-    public class WattboxSocket : IWattboxCommunications, IKeyed
+    public class WattboxSocket : IWattboxCommunications
     {
         private const string DelimiterOut = "\x0A";
         private const string DelimiterIn = "\x0D\x0A";
         private const string DelimiterUsername = ": ";
-        private readonly IBasicCommunication _communication;
+        public readonly IBasicCommunication Communication;
         private readonly TcpSshPropertiesConfig _config;
         private CommunicationGather _portGather;
+        private CTimer _deviceInfoTimer;
 
         public WattboxSocket(string key, string name, IBasicCommunication comm, TcpSshPropertiesConfig tcpProperties)
         {
@@ -21,7 +23,7 @@ namespace Wattbox.Lib
             Debug.Console(1, this, "Made it to constructor for Wattbox Socket");
             _config = tcpProperties;
 
-            _communication = comm;
+            Communication = comm;
             var socket = comm as ISocketStatus;
 
             if (socket != null)
@@ -29,13 +31,13 @@ namespace Wattbox.Lib
                 socket.ConnectionChange += socket_ConnectionChange;
             }
 
-            if (_communication is GenericSshClient)
+            if (Communication is GenericSshClient)
             {
-                _portGather = new CommunicationGather(_communication, DelimiterIn);
+                _portGather = new CommunicationGather(Communication, DelimiterIn);
             }
             else
             {
-                _portGather = new CommunicationGather(_communication, DelimiterUsername);
+                _portGather = new CommunicationGather(Communication, DelimiterUsername);
             }
             
             _portGather.LineReceived += PortGather_LineReceived;
@@ -54,10 +56,14 @@ namespace Wattbox.Lib
         #region IWattboxCommunications Members
 
         public bool IsLoggedIn { get; set; }
-        public bool IsOnline { get; set; }
+        public bool IsOnlineWattbox { get; set; }
         public OutletStatusUpdate UpdateOutletStatus { get; set; }
         public OnlineStatusUpdate UpdateOnlineStatus { get; set; }
         public LoggedInStatusUpdate UpdateLoggedInStatus { get; set; }
+        public FirmwareVersionUpdate UpdateFirmwareVersion { get; set; }
+        public SerialUpdate UpdateSerial { get; set; }
+        public HostnameUpdate UpdateHostname { get; set; }
+
 
         public void SetOutlet(int outletNumber, int outletStatus)
         {
@@ -81,7 +87,7 @@ namespace Wattbox.Lib
         public void Connect()
         {
             Debug.Console(2, this, "Attempting to connect...");
-            _communication.Connect();
+            Communication.Connect();
         }
 
         public void GetStatus()
@@ -101,13 +107,18 @@ namespace Wattbox.Lib
 
         private void socket_ConnectionChange(object sender, GenericSocketStatusChageEventArgs args)
         {
-            IsOnline = args.Client.IsConnected;
+            IsOnlineWattbox = args.Client.IsConnected;
 
             var handler = UpdateOnlineStatus;
 
             if (handler == null) return;
 
-            handler(IsOnline);
+            handler(IsOnlineWattbox);
+
+            if (args.Client.IsConnected)
+            {
+                SendLine("?Hostname");
+            }
         }
 
         public void ParseResponse(string data)
@@ -127,15 +138,42 @@ namespace Wattbox.Lib
                 var outletStatusList = outletStatString.Split(',').Select(s => s == "1").ToList();
 
                 var handler = UpdateOutletStatus;
-
-                if (handler == null)
-                {
-                    return;
-                }
-
-                handler(outletStatusList);
+                if (handler != null) handler(outletStatusList);
 
                 return;
+            }
+
+            if (data.Contains("?Hostname="))
+            {
+                var hostnameString = data.Substring(10);
+                Debug.Console(2, this, "Hostname : {0}", hostnameString);
+                var handler = UpdateHostname;
+                if (handler != null) handler(hostnameString);
+
+                _deviceInfoTimer = new CTimer(SendLine, "?ServiceTag", 250);
+            }
+
+            if (data.Contains("?ServiceTag="))
+            {
+                var serialString = data.Substring(12);
+                Debug.Console(2, this, "Serial : {0}", serialString);
+                var handler = UpdateSerial;
+                if (handler != null) handler(serialString);
+
+                _deviceInfoTimer = new CTimer(SendLine, "?Firmware", 250);
+
+
+            }
+
+            if (data.Contains("?Firmware="))
+            {
+                var firmwareString = data.Substring(10);
+                Debug.Console(2, this, "Firmware : {0}", firmwareString);
+                var handler = UpdateFirmwareVersion;
+                if (handler != null) handler(firmwareString);
+
+                _deviceInfoTimer.Dispose();
+
             }
 
             if (data.Contains("Successfully Logged In"))
@@ -165,7 +203,7 @@ namespace Wattbox.Lib
             _portGather.LineReceived -= PortGather_LineReceived;
 
             //logging in changes the delmiter we're looking for...
-            _portGather = new CommunicationGather(_communication, DelimiterIn);
+            _portGather = new CommunicationGather(Communication, DelimiterIn);
             _portGather.LineReceived += PortGather_LineReceived;
 
             Debug.Console(2, this, "sending password {0}", _config.Password);
@@ -180,12 +218,26 @@ namespace Wattbox.Lib
                 return;
             }
 
-            _communication.SendText(String.Format("{0}{1}", data, DelimiterOut));
+            Communication.SendText(String.Format("{0}{1}", data, DelimiterOut));
 
             if (data.Contains("!OutletSet"))
             {
                 GetStatus();
             }
+        }
+
+        public void SendLine(object data)
+        {
+            var cmd = data as String;
+            if (cmd == null || String.IsNullOrEmpty(cmd)) return;
+
+            Communication.SendText(String.Format("{0}{1}", data, DelimiterOut));
+
+            if (cmd.Contains("!OutletSet"))
+            {
+                GetStatus();
+            }
+
         }
     }
 }
