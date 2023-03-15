@@ -105,6 +105,7 @@
     <Compile Include="WattboxCommunicationMonitor.cs" />
     <Compile Include="WattboxController.cs" />
     <Compile Include="WattboxOutlet.cs" />
+    <Compile Include="WattboxStatusMonitor.cs" />
     <None Include="Properties\ControlSystem.cfg" />
   </ItemGroup>
   <ItemGroup>

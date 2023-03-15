@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PepperDash.Core;
 
 namespace Wattbox.Lib
@@ -14,8 +14,6 @@ namespace Wattbox.Lib
     public delegate void HostnameUpdate(string hostname);
 
     public delegate void SerialUpdate(string serial);
-    
-
 
     public interface IWattboxCommunications : IKeyed
     {

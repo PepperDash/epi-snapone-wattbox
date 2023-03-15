@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Text;
 using Crestron.SimplSharp;
@@ -128,6 +128,7 @@ namespace Wattbox.Lib
 
                     IsOnlineWattbox = (responseCode == 200 && responseCode != 401);
 
+
                     if (!String.IsNullOrEmpty(response.ContentString))
                     {
                         if (response.Header.ContainsHeaderValue("text/xml"))
@@ -149,16 +150,21 @@ namespace Wattbox.Lib
             {
                 Debug.Console(2, this, "Exception in HTTP Request : {0}", e.Message);
                 if (e.Message.ToLower().Contains("unauthorized") || e.Message.ToLower().Contains("401"))
+
                     IsOnlineWattbox = false;
+
                 Debug.Console(2, this, "Stack Trace: {0}", e.StackTrace);
             }
             finally
             {
+
                 //Debug.Console(0, this, "Reached finally and IsOnline =  {0}", IsOnlineWattbox);
+
                 var handler = UpdateOnlineStatus;
 
                 if (handler != null)
                 {
+
                     //Debug.Console(0, this, "UpdateOnlineStatus Handler is Not Null and IsOnline =  {0}", IsOnlineWattbox);
                     handler(IsOnlineWattbox);
                 }
@@ -175,6 +181,7 @@ namespace Wattbox.Lib
         {
             IsOnlineWattbox = false;
             _failtracker++;
+
         }
 
         public void ParseResponse(string data)
@@ -184,7 +191,14 @@ namespace Wattbox.Lib
             {
                 var xml = XElement.Parse(data);
 
-                var result = xml.Element("outlet_status").Value;
+                var hostnameString = xml.Element("host_name").Value;
+                var hostnameHandler = UpdateHostname;
+                if (hostnameHandler != null) hostnameHandler(hostnameString);
+
+                var deviceModel = xml.Element("hardware_version").Value;
+                var deviceModelHandler = UpdateFirmwareVersion;
+                if (UpdateFirmwareVersion != null) deviceModelHandler(deviceModel);
+
 
                 var hostnameString = xml.Element("host_name").Value;
                 var hostnameHandler = UpdateHostname;
@@ -194,11 +208,13 @@ namespace Wattbox.Lib
                 var deviceModelHandler = UpdateFirmwareVersion;
                 if (UpdateFirmwareVersion != null) deviceModelHandler(deviceModel);
 
+
                 var serial = xml.Element("serial_number").Value;
                 var serialHandler = UpdateSerial;
                 if (UpdateSerial != null) serialHandler(serial);
 
                 //var result2 = result.Element("outlet_status").Value;
+
 
                 var outletStatus = result.Split(',').Select(s => s == "1").ToList();
 

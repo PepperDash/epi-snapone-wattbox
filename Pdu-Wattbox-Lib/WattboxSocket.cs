@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Linq;
 using Crestron.SimplSharp;
 using PepperDash.Core;
+
 
 namespace Wattbox.Lib
 {
@@ -143,6 +144,7 @@ namespace Wattbox.Lib
                 return;
             }
 
+
             if (data.Contains("?Hostname="))
             {
                 var hostnameString = data.Substring(10);
@@ -208,8 +210,24 @@ namespace Wattbox.Lib
 
             Debug.Console(2, this, "sending password {0}", _config.Password);
             SendLine(_config.Password);
-             
+
         }
+
+        public void SendLine(object data)
+        {
+            var cmd = data as String;
+            if (cmd == null || String.IsNullOrEmpty(cmd)) return;
+
+            _communication.SendText(String.Format("{0}{1}", data, DelimiterOut));
+
+            if (cmd.Contains("!OutletSet"))
+            {
+                GetStatus();
+            }
+
+        }
+
+
 
         public void SendLine(string data)
         {

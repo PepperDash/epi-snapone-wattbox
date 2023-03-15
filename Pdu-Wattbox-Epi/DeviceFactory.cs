@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Core;
@@ -29,17 +29,30 @@ namespace Pdu_Wattbox_Epi
 
             IWattboxCommunications internalComms;
 
-            if (controlProperties.Method == eControlMethod.Http)
+            var method = controlProperties.Method;
+
+            var methodString = method.ToString();
+
+            var newKey = String.Format("{0}-{1}", dc.Key, methodString);
+            var newName = String.Format("{0}-{1}", dc.Name, methodString);
+
+            if (method == eControlMethod.Http || method == eControlMethod.Https)
             {
                 Debug.Console(1, "Creating Wattbox using HTTP Comms");
+
                 internalComms = new WattboxHttp(String.Format("{0}-http", dc.Key), String.Format("{0}-http", dc.Name),
+
                     "Basic", controlProperties.TcpSshProperties);
+                DeviceManager.AddDevice(comms);
+
             }
             else
             {
                 Debug.Console(1, "Creating Wattbox using TCP/IP Comms");
                 var comm = CommFactory.CreateCommForDevice(dc);
+
                 internalComms = new WattboxSocket(String.Format("{0}-tcp", dc.Key), String.Format("{0}-tcp", dc.Name), comm,
+
                     controlProperties.TcpSshProperties);
             }
             var control = CommFactory.GetControlPropertiesConfig(dc);
