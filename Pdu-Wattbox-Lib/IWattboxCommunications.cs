@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PepperDash.Core;
 
 namespace Wattbox.Lib
@@ -15,18 +15,16 @@ namespace Wattbox.Lib
 
     public delegate void SerialUpdate(string serial);
 
-
     public interface IWattboxCommunications : IKeyed
     {
-        bool IsLoggedIn { get; set; }
-        bool IsOnline { get; set; }
+        bool IsLoggedIn { get; }
+        bool IsOnlineWattbox { get;  }
         OutletStatusUpdate UpdateOutletStatus { get; set; }
         OnlineStatusUpdate UpdateOnlineStatus { get; set; }
         LoggedInStatusUpdate UpdateLoggedInStatus { get; set; }
         FirmwareVersionUpdate UpdateFirmwareVersion { get; set; }
         HostnameUpdate UpdateHostname { get; set; }
         SerialUpdate UpdateSerial { get; set; }
-
 
         void GetStatus();
         void SetOutlet(int index, int action);

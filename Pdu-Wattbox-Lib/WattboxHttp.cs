@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Text;
+using Crestron.SimplSharp;
 using Crestron.SimplSharp.CrestronXmlLinq;
 using Crestron.SimplSharp.Net.Http;
 using PepperDash.Core;
@@ -15,6 +16,7 @@ namespace Wattbox.Lib
         private readonly int _port;
         private readonly HttpClientRequest _request = new HttpClientRequest();
         private readonly string _username;
+        private int _failtracker;
 
         public WattboxHttp(string key, string name, string authType, TcpSshPropertiesConfig tcpProperties)
         {
@@ -22,13 +24,14 @@ namespace Wattbox.Lib
             Key = key;
             Name = name;
 
-            Debug.Console(1, this, "Made it to constructor for Wattbox HTTP");
+            //Debug.Console(1, this, "Made it to constructor for Wattbox HTTP");
 
             BaseUrl = tcpProperties.Address;
             _port = tcpProperties.Port;
             _username = tcpProperties.Username;
             _password = tcpProperties.Password;
             _authorization = authType;
+
         }
 
         public string Name { get; set; }
@@ -49,9 +52,8 @@ namespace Wattbox.Lib
         public FirmwareVersionUpdate UpdateFirmwareVersion { get; set; }
         public SerialUpdate UpdateSerial { get; set; }
         public HostnameUpdate UpdateHostname { get; set; }
-
         public bool IsLoggedIn { get; set; }
-        public bool IsOnline { get; set; }
+        public bool IsOnlineWattbox { get; set; }
 
 
         public void GetStatus()
@@ -59,7 +61,7 @@ namespace Wattbox.Lib
             var newUrl = String.Format("http://{0}/wattbox_info.xml", BaseUrl);
             var newDir = String.Format("/wattbox_info.xml");
 
-            Debug.Console(2, this, "Sending status request to {0}", newUrl);
+            //Debug.Console(2, this, "Sending status request to {0}", newUrl);
             SubmitRequest(newUrl, newDir, RequestType.Get);
         }
 
@@ -67,13 +69,13 @@ namespace Wattbox.Lib
         {
             var newUrl = String.Format("http://{0}/control.cgi?outlet={1}&command={2}", BaseUrl, index, action);
             var newDir = String.Format("/control.cgi?outlet={0}&command={1}", index, action);
-            Debug.Console(2, Debug.ErrorLogLevel.Notice, "Url: {0}", newUrl);
+            //Debug.Console(2, Debug.ErrorLogLevel.Notice, "Url: {0}", newUrl);
             SubmitRequest(newUrl, newDir, RequestType.Get);
         }
 
         public void Connect()
         {
-            Debug.Console(2, this, "No connection necessary");
+            //Debug.Console(2, this, "No connection necessary");
         }
 
         #endregion
@@ -82,6 +84,11 @@ namespace Wattbox.Lib
         {
             try
             {
+                if (_failtracker >= 3)
+                {
+                    Debug.Console(0, this, Debug.ErrorLogLevel.Warning, "Authentication failure - please check auth and restart essentials");
+                }
+
                 var plainText = Encoding.UTF8.GetBytes(String.Format("{0}:{1}", _username, _password));
 
                 var encodedAuth = Convert.ToBase64String(plainText);
@@ -117,44 +124,63 @@ namespace Wattbox.Lib
                 {
                     var responseCode = response.Code;
 
-                    Debug.Console(2, "{0}:{1}", url, responseCode);
+                    //Debug.Console(2, "{0}:{1}", url, responseCode);
 
-                    IsOnline = (responseCode == 200 && responseCode != 401);
+                    IsOnlineWattbox = (responseCode == 200 && responseCode != 401);
+
 
                     if (!String.IsNullOrEmpty(response.ContentString))
                     {
-                        ParseResponse(response.ContentString);
+                        if (response.Header.ContainsHeaderValue("text/xml"))
+                        {
+                            ParseResponse(response.ContentString);
+                        }
+                        else SetOfflineFail();
+
                     }
+                    else IsOnlineWattbox = false;
+
                 }
                 else
                 {
-                    IsOnline = false;
+                    IsOnlineWattbox = false;
                 }
             }
             catch (Exception e)
             {
                 Debug.Console(2, this, "Exception in HTTP Request : {0}", e.Message);
                 if (e.Message.ToLower().Contains("unauthorized") || e.Message.ToLower().Contains("401"))
-                    IsOnline = false;
+
+                    IsOnlineWattbox = false;
 
                 Debug.Console(2, this, "Stack Trace: {0}", e.StackTrace);
             }
             finally
             {
-                Debug.Console(0, this, "Reached finally and IsOnline =  {0}", IsOnline);
+
+                //Debug.Console(0, this, "Reached finally and IsOnline =  {0}", IsOnlineWattbox);
+
                 var handler = UpdateOnlineStatus;
 
                 if (handler != null)
                 {
-                    Debug.Console(0, this, "UpdateOnlineStatus Handler is Not Null and IsOnline =  {0}", IsOnline);
-                    handler(IsOnline);
+
+                    //Debug.Console(0, this, "UpdateOnlineStatus Handler is Not Null and IsOnline =  {0}", IsOnlineWattbox);
+                    handler(IsOnlineWattbox);
                 }
+                    /*
                 else
                 {
-                    Debug.Console(0, this, "UpdateOnlineStatus Handler is Null and IsOnline =  {0}", IsOnline);
-
+                    Debug.Console(0, this, "UpdateOnlineStatus Handler is Null and IsOnline =  {0}", IsOnlineWattbox);
                 }
+                     */
             }
+        }
+
+        private void SetOfflineFail()
+        {
+            IsOnlineWattbox = false;
+            _failtracker++;
 
         }
 
@@ -173,11 +199,22 @@ namespace Wattbox.Lib
                 var deviceModelHandler = UpdateFirmwareVersion;
                 if (UpdateFirmwareVersion != null) deviceModelHandler(deviceModel);
 
+
+                var hostnameString = xml.Element("host_name").Value;
+                var hostnameHandler = UpdateHostname;
+                if (hostnameHandler != null) hostnameHandler(hostnameString);
+
+                var deviceModel = xml.Element("hardware_version").Value;
+                var deviceModelHandler = UpdateFirmwareVersion;
+                if (UpdateFirmwareVersion != null) deviceModelHandler(deviceModel);
+
+
                 var serial = xml.Element("serial_number").Value;
                 var serialHandler = UpdateSerial;
                 if (UpdateSerial != null) serialHandler(serial);
 
-                var result = xml.Element("outlet_status").Value;
+                //var result2 = result.Element("outlet_status").Value;
+
 
                 var outletStatus = result.Split(',').Select(s => s == "1").ToList();
 
