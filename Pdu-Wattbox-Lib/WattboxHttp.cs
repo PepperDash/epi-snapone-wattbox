@@ -87,6 +87,7 @@ namespace Wattbox.Lib
                 if (_failtracker >= 3)
                 {
                     Debug.Console(0, this, Debug.ErrorLogLevel.Warning, "Authentication failure - please check auth and restart essentials");
+                    return;
                 }
 
                 var plainText = Encoding.UTF8.GetBytes(String.Format("{0}:{1}", _username, _password));
