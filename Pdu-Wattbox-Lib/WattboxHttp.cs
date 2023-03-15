@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Text;
 using Crestron.SimplSharp;
@@ -200,20 +200,11 @@ namespace Wattbox.Lib
                 if (UpdateFirmwareVersion != null) deviceModelHandler(deviceModel);
 
 
-                var hostnameString = xml.Element("host_name").Value;
-                var hostnameHandler = UpdateHostname;
-                if (hostnameHandler != null) hostnameHandler(hostnameString);
-
-                var deviceModel = xml.Element("hardware_version").Value;
-                var deviceModelHandler = UpdateFirmwareVersion;
-                if (UpdateFirmwareVersion != null) deviceModelHandler(deviceModel);
-
-
                 var serial = xml.Element("serial_number").Value;
                 var serialHandler = UpdateSerial;
                 if (UpdateSerial != null) serialHandler(serial);
 
-                //var result2 = result.Element("outlet_status").Value;
+                var result = xml.Element("outlet_status").Value;
 
 
                 var outletStatus = result.Split(',').Select(s => s == "1").ToList();

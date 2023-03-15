@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Crestron.SimplSharp;
 using PepperDash.Core;
@@ -213,19 +213,6 @@ namespace Wattbox.Lib
 
         }
 
-        public void SendLine(object data)
-        {
-            var cmd = data as String;
-            if (cmd == null || String.IsNullOrEmpty(cmd)) return;
-
-            _communication.SendText(String.Format("{0}{1}", data, DelimiterOut));
-
-            if (cmd.Contains("!OutletSet"))
-            {
-                GetStatus();
-            }
-
-        }
 
 
 

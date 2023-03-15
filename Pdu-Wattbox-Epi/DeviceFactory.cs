@@ -41,9 +41,8 @@ namespace Pdu_Wattbox_Epi
                 Debug.Console(1, "Creating Wattbox using HTTP Comms");
 
                 internalComms = new WattboxHttp(String.Format("{0}-http", dc.Key), String.Format("{0}-http", dc.Name),
-
                     "Basic", controlProperties.TcpSshProperties);
-                DeviceManager.AddDevice(comms);
+                DeviceManager.AddDevice(internalComms);
 
             }
             else

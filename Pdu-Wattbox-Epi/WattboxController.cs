@@ -137,7 +137,7 @@ namespace Pdu_Wattbox_Epi
         {
             try
             {
-                WattboxStatusMonitor.IsOnline = online;
+                Comms.IsOnline = online;
                 IsOnlineFeedback.FireUpdate();
             }
             catch (Exception ex)
@@ -168,90 +168,7 @@ namespace Pdu_Wattbox_Epi
             UpdateDeviceInfo();
         }
 
-        private void UpdateFirmwareVersion(string firmware)
-        {
-            if (DeviceInfo == null) return;
-            DeviceInfo.FirmwareVersion = firmware;
-            UpdateDeviceInfo();
-        }
-        private void UpdateHostname(string hostname)
-        {
-            if (DeviceInfo == null) return;
-            DeviceInfo.HostName = hostname;
-            var isIpAddress = CheckIp(hostname);
-            DeviceInfo.IpAddress = isIpAddress ? hostname : GetIpAddress(hostname);
-            DeviceInfo.MacAddress = isIpAddress ? GetMacAddress(hostname) : "00:00:00:00:00:00";
-            UpdateDeviceInfo();
-        }
-        private void UpdateSerial(string serial)
-        {
-            if (DeviceInfo == null) return;
-            DeviceInfo.SerialNumber = serial;
-            UpdateDeviceInfo();
-        }
 
-        private string GetIpAddress(string hostname)
-        {
-            const string threeSeriesPattern = @"(?<=\[).+?(?=\])";
-            const string fourSeriesPattern = @"(?<=\().+?(?=\))";
-            var response = String.Empty;
-            var cmd = String.Format("ping -n1 {0}", hostname);
-            CrestronConsole.SendControlSystemCommand(cmd, ref response);
-
-            Debug.Console(2, this, "Ping Response = {0}", response);
-
-            var regex = new Regex(Global.ProcessorSeries == eCrestronSeries.Series3
-                ? threeSeriesPattern
-                : fourSeriesPattern);
-            var match = regex.Match(response);
-            return match != null ? match.ToString() : String.Empty;
-        }
-
-        private string GetMacAddress(string ipAddress)
-        {
-            const string macAddressPattern = @"([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})";
-            var regex = new Regex(macAddressPattern);
-            var response = String.Empty;
-            CrestronConsole.SendControlSystemCommand("ShowArpTable", ref response);
-
-            Debug.Console(2, this, "ARP Response = {0}", response);
-
-            var addressToSearch = ipAddress;
-            if (Global.ProcessorSeries == eCrestronSeries.Series3)
-            {
-                var octets = ipAddress.Split('.');
-                var sb = new StringBuilder();
-                foreach (var octet in octets)
-                {
-                    sb.Append(octet.PadLeft(3, ' ') + ".");
-                }
-                sb.Length--;
-                addressToSearch = sb.ToString();
-            }
-            var substring = response.Substring(response.IndexOf(addressToSearch, StringComparison.Ordinal));
-            var match = regex.Match(substring);
-            return match != null ? match.ToString() : String.Empty;
-
-        }
-
-        public bool CheckIp(string data)
-        {
-            try
-            {
-                IPAddress.Parse(data);
-                return true;
-
-            }
-            catch (Exception e)
-            {
-                var ex = e as FormatException;
-                if (ex != null)
-                {
-                    Debug.Console(2, this, "{0} is not a valid IP Address", data);
-                }
-                return false;
-            }
-        }
 
 
 
