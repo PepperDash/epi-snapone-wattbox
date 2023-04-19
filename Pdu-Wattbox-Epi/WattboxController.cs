@@ -5,7 +5,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.DeviceSupport;
+using Crestron.SimplSharpPro.Diagnostics;
+using Newtonsoft.Json.Linq;
 using PepperDash.Core;
+using Newtonsoft.Json;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Config;
@@ -15,7 +18,7 @@ using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace Pdu_Wattbox_Epi
 {
-    public class WattboxController : EssentialsBridgeableDevice, IHasControlledPowerOutlets, IDeviceInfoProvider
+    public class WattboxController : EssentialsBridgeableDevice, IHasControlledPowerOutlets, IDeviceInfoProvider, ICommunicationMonitor
     {
         private const long PollTime = 45000;
         //private readonly IWattboxCommunications _comms;
@@ -27,6 +30,12 @@ namespace Pdu_Wattbox_Epi
         public readonly WattboxCommunicationMonitor Comms;
 
         public DeviceInfo DeviceInfo { get; private set; }
+
+        public readonly List<Outlet> Outlets;
+
+        public StatusMonitorBase CommunicationMonitor { get; set; }
+    
+        
 
 
 
@@ -43,7 +52,10 @@ namespace Pdu_Wattbox_Epi
         public WattboxController(string key, string name, WattboxCommunicationMonitor comms, DeviceConfig dc)
             : base(key, name)
         {
+            CommunicationMonitor = comms;
+
             Comms = comms;
+
 
             Comms.UpdateOutletStatus = UpdateOutletStatus;
             Comms.UpdateOnlineStatus = UpdateOnlineStatus;
@@ -56,11 +68,29 @@ namespace Pdu_Wattbox_Epi
 
             TempDict = new Dictionary<int, IHasPowerCycle>();
 
-            if (dc.Properties != null) _props = dc.Properties.ToObject<Properties>();
+            if (dc.Properties == null)
+            {
+                Debug.Console(0, this, "Malformed Json");
+                return;
+            }
 
+            var outlets = new List<Outlet>();
+            
+            _props = dc.Properties.ToObject<Properties>();
+            var outletsToken = dc.Properties.SelectToken("outlets");
+            if (outletsToken is JArray)
+            {
+                outlets = outletsToken.ToObject<List<Outlet>>();
+            }
 
-            Debug.Console(2, this, "There are {0} outlets for {1}", _props.Outlets.Count(), Name);
-            foreach (var item in _props.Outlets)
+            else if (outletsToken is JObject)
+            {
+                outlets = ListConvert(outletsToken.ToObject<Dictionary<string, OutletDict>>());
+            }
+            Outlets = outlets;
+
+            Debug.Console(2, this, "There are {0} outlets for {1}", Outlets.Count(), Name);
+            foreach (var item in Outlets)
             {
                 var i = item;
                 var outlet = new WattboxOutlet(i.OutletNumber, i.Name, i.Enabled, this);
@@ -70,24 +100,19 @@ namespace Pdu_Wattbox_Epi
             PduOutlets = new ReadOnlyDictionary<int, IHasPowerCycle>(TempDict);
             OutletCount = PduOutlets.Count;
 
-            //var control = CommFactory.GetControlPropertiesConfig(dc);
-            /*
-            if (control.Method == eControlMethod.Http || control.Method == eControlMethod.Https)
-            {
-                _pollTimer = new CTimer(o => GetStatus(), null, 0, PollTime);
-            }
-            */
-
-
-
             CrestronEnvironment.ProgramStatusEventHandler += type =>
             {
                 if (type != eProgramStatusEventType.Stopping) return;
 
+                Comms.Stop();
+                CommunicationMonitor.Stop();
+                if (_pollTimer == null) return;
                 _pollTimer.Stop();
                 _pollTimer.Dispose();
                 _pollTimer = null;
+
             };
+
             NameFeedback = new StringFeedback(() => Name);
             IsOnlineFeedback = new BoolFeedback(() => Comms.IsOnlineWattbox);
             OutletCountFeedback = new IntFeedback(() => OutletCount);
@@ -98,6 +123,13 @@ namespace Pdu_Wattbox_Epi
                 IsOnlineFeedback,
                 OutletCountFeedback
             };
+        }
+
+
+
+        private static List<Outlet> ListConvert(Dictionary<string, OutletDict> dict )
+        {
+            return (from outletDict in dict let key = outletDict.Key let value = outletDict.Value select new Outlet(key, value)).ToList();
         }
 
         private void UpdateLoggedInStatus(bool status)
@@ -119,7 +151,7 @@ namespace Pdu_Wattbox_Epi
         private void UpdateOutletStatus(List<bool> outletStatus)
         {
             var actual = outletStatus.Count;
-            var configured = _props.Outlets.Count;
+            var configured = Outlets.Count;
 
             if (configured != actual)
                 Debug.Console(0, this, "The number of configured outlets ({0}) does not match the number of outlets on the device ({1}).", configured, actual);
@@ -205,7 +237,7 @@ namespace Pdu_Wattbox_Epi
 
             Debug.Console(1, this, "Linking to Trilist '{0}'", trilist.ID.ToString("X"));
 
-            Debug.Console(2, this, "There are {0} Outlets", _props.Outlets.Count());
+            Debug.Console(2, this, "There are {0} Outlets", Outlets.Count());
 
             IsOnlineFeedback.LinkInputSig(trilist.BooleanInput[joinMap.Online.JoinNumber]);
 
@@ -238,6 +270,7 @@ namespace Pdu_Wattbox_Epi
         public override bool CustomActivate()
         {
             Comms.Connect();
+            Comms.Start();
             return base.CustomActivate();
         }
 
@@ -323,6 +356,11 @@ namespace Pdu_Wattbox_Epi
                 return false;
             }
         }
+
+
+        #endregion
+
+        #region ICommunicationMonitor Members
 
 
         #endregion

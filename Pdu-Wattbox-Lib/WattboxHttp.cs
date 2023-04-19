@@ -118,28 +118,36 @@ namespace Wattbox.Lib
                 request.Url.Parse(url);
                 request.RequestType = requestType;
 
-                Debug.Console(2, this, "Sending request to {0}", request.Url);
+                //Debug.Console(2, this, "Sending request to {0}", request.Url);
                 var response = _client.Dispatch(request);
 
                 if (response != null)
                 {
                     var responseCode = response.Code;
 
-                    //Debug.Console(2, "{0}:{1}", url, responseCode);
+                    Debug.Console(2, "{0}:{1}", url, responseCode);
 
                     IsOnlineWattbox = (responseCode == 200 && responseCode != 401);
 
 
                     if (!String.IsNullOrEmpty(response.ContentString))
                     {
-                        if (response.Header.ContainsHeaderValue("text/xml"))
+                        //Debug.Console(2, this, "Header Content Type : \n{0}", response.Header.ContentType);
+
+                        //Debug.Console(2, this, "Response : \n{0}", response.ContentString);
+
+                        if (response.Header.ContentType.Contains("text/xml"))
                         {
+                            //Debug.Console(2, this, "Parsing");
                             ParseResponse(response.ContentString);
                         }
                         else SetOfflineFail();
-
                     }
-                    else IsOnlineWattbox = false;
+                    else
+                    {
+                        IsOnlineWattbox = false;
+                        Debug.Console(2, this, "Response ContentString is null or empty");
+                    }
 
                 }
                 else
@@ -169,12 +177,6 @@ namespace Wattbox.Lib
                     //Debug.Console(0, this, "UpdateOnlineStatus Handler is Not Null and IsOnline =  {0}", IsOnlineWattbox);
                     handler(IsOnlineWattbox);
                 }
-                    /*
-                else
-                {
-                    Debug.Console(0, this, "UpdateOnlineStatus Handler is Null and IsOnline =  {0}", IsOnlineWattbox);
-                }
-                     */
             }
         }
 
@@ -212,12 +214,8 @@ namespace Wattbox.Lib
 
                 var handler = UpdateOutletStatus;
 
-                if (handler == null)
-                {
-                    return;
-                }
-
-                handler(outletStatus);
+                if (handler != null) handler(outletStatus);
+                
             }
             else
             {
