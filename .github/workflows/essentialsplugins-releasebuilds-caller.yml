@@ -1,10 +1,12 @@
 
-name: Beta Build
+name: Release Build
 
-on: 
-  push:
-    branches-ignore: 
-      - main
+on:
+  release:
+    types:
+      - released
+    branches:
+      - "main"
 
   workflow_dispatch: 
     inputs: 
@@ -18,5 +20,7 @@ jobs:
     uses: PepperDash/workflow-templates/.github/workflows/essentialsplugins-builds.yml@main
     secrets: inherit
     with: 
-      branch: ${{ inputs.branch }}
-      default-branch: main
+      branch: ${{ github.ref_name }}
+      default-branch: "main"
+
+
