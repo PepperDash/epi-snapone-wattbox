@@ -36,7 +36,7 @@ namespace Pdu_Wattbox_Epi
             _pollTime = pollTime;
             _controlMethod = controlMethod;
 
-            DeviceManager.AddDevice(this);
+            //DeviceManager.AddDevice(this);
 
             UpdateFirmwareVersion = Communications.UpdateFirmwareVersion;
             UpdateSerial = Communications.UpdateSerial;

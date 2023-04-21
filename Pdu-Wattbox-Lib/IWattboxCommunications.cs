@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using PepperDash.Core;
 
@@ -19,6 +20,7 @@ namespace Wattbox.Lib
     {
         bool IsLoggedIn { get; }
         bool IsOnlineWattbox { get;  }
+
         OutletStatusUpdate UpdateOutletStatus { get; set; }
         OnlineStatusUpdate UpdateOnlineStatus { get; set; }
         LoggedInStatusUpdate UpdateLoggedInStatus { get; set; }
@@ -31,4 +33,5 @@ namespace Wattbox.Lib
 
         void Connect();
     }
+
 }
