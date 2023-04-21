@@ -1,8 +1,11 @@
-name: Beta Build
 
-on: 
-  push:
-    branches-ignore: 
+name: Release Build
+
+on:
+  release:
+    types:
+      - released
+    branches:
       - "main"
 
   workflow_dispatch: 
@@ -19,3 +22,4 @@ jobs:
     with: 
       branch: ${{ github.ref_name }}
       default-branch: "main"
+
