@@ -5,10 +5,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.DeviceSupport;
-using Crestron.SimplSharpPro.Diagnostics;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PepperDash.Core;
-using Newtonsoft.Json;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Config;
@@ -35,10 +34,6 @@ namespace Pdu_Wattbox_Epi
 
         public StatusMonitorBase CommunicationMonitor { get; set; }
     
-        
-
-
-
 
         public readonly int OutletCount;
 
@@ -55,7 +50,6 @@ namespace Pdu_Wattbox_Epi
             CommunicationMonitor = comms;
 
             Comms = comms;
-
 
             Comms.UpdateOutletStatus = UpdateOutletStatus;
             Comms.UpdateOnlineStatus = UpdateOnlineStatus;
@@ -76,15 +70,29 @@ namespace Pdu_Wattbox_Epi
 
             var outlets = new List<Outlet>();
             
-            _props = dc.Properties.ToObject<Properties>();
             var outletsToken = dc.Properties.SelectToken("outlets");
+            if (outletsToken == null)
+            {
+                Debug.Console(0, this, "OutletsToken is null");
+                return;
+            }
             if (outletsToken is JArray)
             {
-                outlets = outletsToken.ToObject<List<Outlet>>();
+                _props = dc.Properties.ToObject<Properties>();
+
+                Debug.Console(0, this, "Found an Array");
+                outlets = _props.Outlets;
+                if (outlets == null)
+                {
+                    Debug.Console(0, this,"That Array is Null");
+                    return;
+                }
             }
 
             else if (outletsToken is JObject)
             {
+                Debug.Console(0, this, "Found an Object");
+
                 outlets = ListConvert(outletsToken.ToObject<Dictionary<string, OutletDict>>());
             }
             Outlets = outlets;
@@ -200,12 +208,6 @@ namespace Pdu_Wattbox_Epi
             UpdateDeviceInfo();
         }
 
-
-
-
-
-
-
         public void GetStatus()
         {
             Comms.GetStatus();   
@@ -223,7 +225,7 @@ namespace Pdu_Wattbox_Epi
 
         public override void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
         {
-            var joinMap = new PduJoinMapBase(joinStart);
+            var joinMap = new WattboxJoinmapDynamic(joinStart, PduOutlets);
 
             var customJoins = JoinMapHelper.TryGetJoinMapAdvancedForDevice(joinMapKey);
 
@@ -239,12 +241,12 @@ namespace Pdu_Wattbox_Epi
 
             Debug.Console(2, this, "There are {0} Outlets", Outlets.Count());
 
-            IsOnlineFeedback.LinkInputSig(trilist.BooleanInput[joinMap.Online.JoinNumber]);
+            IsOnlineFeedback.LinkInputSig(trilist.BooleanInput[joinMap.BaseJoinMap.Online.JoinNumber]);
 
-            NameFeedback.LinkInputSig(trilist.StringInput[joinMap.Name.JoinNumber]);
+            NameFeedback.LinkInputSig(trilist.StringInput[joinMap.BaseJoinMap.Name.JoinNumber]);
 
 
-            if ((int)joinMap.OutletName.JoinNumber - (int)joinStart > 0)
+            if ((int)joinMap.BaseJoinMap.OutletName.JoinNumber - (int)joinStart > 0)
             {
                 foreach (var o in PduOutlets.Select(outlet => outlet.Value).OfType<WattboxOutlet>())
                 {
@@ -317,13 +319,10 @@ namespace Pdu_Wattbox_Epi
 
         }
 
-
-
         #region ICommunicationMonitor Members
 
 
         #endregion
-
 
         #region IDeviceInfoProvider Members
 
