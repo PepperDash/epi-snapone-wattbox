@@ -3,6 +3,7 @@ using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Core;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 using Wattbox.Lib;
 
 namespace Pdu_Wattbox_Epi
