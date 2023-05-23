@@ -18,7 +18,7 @@ using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace Pdu_Wattbox_Epi
 {
-    public class WattboxController : ReconfigurableDevice, IHasControlledPowerOutlets, IDeviceInfoProvider, ICommunicationMonitor
+    public class WattboxController : ReconfigurableDevice, IHasControlledPowerOutlets, IDeviceInfoProvider, ICommunicationMonitor, IBridgeAdvanced
     {
         private const long PollTime = 45000;
         //private readonly IWattboxCommunications _comms;
@@ -225,7 +225,7 @@ namespace Pdu_Wattbox_Epi
             Comms.SetOutlet(index, (int)action);
         }
 
-        public override void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
+        public void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
         {
             var joinMap = new WattboxJoinmapDynamic(joinStart, PduOutlets);
 
