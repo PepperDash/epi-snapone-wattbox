@@ -12,12 +12,13 @@ using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.DeviceInfo;
+using PepperDash.Essentials.Core.Devices;
 using PepperDash_Essentials_Core.Devices;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace Pdu_Wattbox_Epi
 {
-    public class WattboxController : EssentialsBridgeableDevice, IHasControlledPowerOutlets, IDeviceInfoProvider, ICommunicationMonitor
+    public class WattboxController : ReconfigurableDevice, IHasControlledPowerOutlets, IDeviceInfoProvider, ICommunicationMonitor
     {
         private const long PollTime = 45000;
         //private readonly IWattboxCommunications _comms;
@@ -33,7 +34,8 @@ namespace Pdu_Wattbox_Epi
         public readonly List<Outlet> Outlets;
 
         public StatusMonitorBase CommunicationMonitor { get; set; }
-    
+
+        private DeviceConfig _dc;
 
         public readonly int OutletCount;
 
@@ -45,7 +47,7 @@ namespace Pdu_Wattbox_Epi
 
 
         public WattboxController(string key, string name, WattboxCommunicationMonitor comms, DeviceConfig dc)
-            : base(key, name)
+            : base(dc)
         {
             CommunicationMonitor = comms;
 
@@ -237,6 +239,12 @@ namespace Pdu_Wattbox_Epi
                 bridge.AddJoinMap(Key, joinMap);
             }
 
+            JoinDataComplete joinData;
+            if (joinMap.Joins.TryGetValue("SetIpAddress", out joinData))
+            {
+                trilist.SetStringSigAction(joinData.JoinNumber, (s) => { SetIpAddress(s); });
+            }
+
             Debug.Console(1, this, "Linking to Trilist '{0}'", trilist.ID.ToString("X"));
 
             Debug.Console(2, this, "There are {0} Outlets", Outlets.Count());
@@ -265,6 +273,33 @@ namespace Pdu_Wattbox_Epi
                     item.FireUpdate();
                 }
             };
+        }
+
+        protected override void CustomSetConfig(DeviceConfig config)
+        {
+            ConfigWriter.UpdateDeviceConfig(config);
+        }
+
+        private void SetIpAddress(string hostname)
+        {
+            try
+            {
+                if (hostname.Length > 2 &
+                    _dc.Properties["control"]["tcpSshProperties"]["address"].ToString() != hostname)
+                {
+                    Debug.Console(2, this, "Changing IPAddress: {0}", hostname);
+
+                    UpdateHostname(hostname);
+
+                    _dc.Properties["control"]["tcpSshProperties"]["address"] = hostname;
+                    CustomSetConfig(_dc);
+                }
+            }
+            catch (Exception e)
+            {
+                if (Debug.Level == 2)
+                    Debug.Console(2, this, "Error SetIpAddress: '{0}'", e);
+            }
         }
 
         #region Overrides of Device

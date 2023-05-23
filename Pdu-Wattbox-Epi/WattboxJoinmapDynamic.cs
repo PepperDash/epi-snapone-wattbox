@@ -10,6 +10,27 @@ namespace Pdu_Wattbox_Epi
     {
         public readonly PduJoinMapBase BaseJoinMap;
 
+        private void SetIpChangeJoin(uint joinStart)
+        {
+            var joinData = new JoinData
+            {
+
+                JoinNumber = (uint)(2 + joinStart - 1),
+                JoinSpan = 1
+            };
+
+            var joinMetaData = new JoinMetadata
+            {
+                Description = "Set device IP Address",
+                JoinCapabilities = eJoinCapabilities.FromSIMPL,
+                JoinType = eJoinType.DigitalSerial
+            };
+
+            var joinDataComplete = new JoinDataComplete(joinData, joinMetaData);
+
+            Joins.Add("SetIpAddress", joinDataComplete);
+        }
+
         public WattboxJoinmapDynamic(uint joinStart, IEnumerable<KeyValuePair<int, IHasPowerCycle>> pduOutlets)
             : base(joinStart, typeof (WattboxJoinmapDynamic))
         {
@@ -19,6 +40,7 @@ namespace Pdu_Wattbox_Epi
             Joins.Add("Name", BaseJoinMap.Joins["Name"]);
             Joins.Add("Online", BaseJoinMap.Joins["Online"]);
             Joins.Add("OutletCount", BaseJoinMap.Joins["OutletCount"]);
+            SetIpChangeJoin(joinStart);
 
             foreach (var index in pduOutlets.Select(outlet => outlet.Key))
             {
@@ -30,6 +52,7 @@ namespace Pdu_Wattbox_Epi
             }
 
         }
+        
 
         private void SetOutletNameJoinData(int index)
         {
