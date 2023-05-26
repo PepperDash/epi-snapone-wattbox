@@ -13,6 +13,8 @@ namespace Pdu_Wattbox_Epi {
         public EssentialsControlPropertiesConfig Control { get; set; }
         [JsonProperty("authType")]
         public string AuthType { get; set; }
+        [JsonProperty("parseOutletNames")]
+        public bool ParseOutletNames { get; set; }
         [JsonProperty("outlets")]
         public List<Outlet> Outlets { get; set; }
     }

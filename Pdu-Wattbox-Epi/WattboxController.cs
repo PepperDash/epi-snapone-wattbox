@@ -38,8 +38,11 @@ namespace Pdu_Wattbox_Epi
         private DeviceConfig _dc;
 
         public readonly int OutletCount;
+        private bool _ipChanged;
+        private bool _parseOutletNames;
 
         public BoolFeedback IsOnlineFeedback;
+        public BoolFeedback IpChangeFeedback;
         public IntFeedback OutletCountFeedback;
         public StringFeedback NameFeedback;
 
@@ -54,6 +57,7 @@ namespace Pdu_Wattbox_Epi
             Comms = comms;
 
             Comms.UpdateOutletStatus = UpdateOutletStatus;
+            Comms.UpdateOutletName = UpdateOutletName;
             Comms.UpdateOnlineStatus = UpdateOnlineStatus;
             Comms.UpdateLoggedInStatus = UpdateLoggedInStatus;
             Comms.UpdateFirmwareVersion = UpdateFirmwareVersion;
@@ -61,6 +65,8 @@ namespace Pdu_Wattbox_Epi
             Comms.UpdateHostname = UpdateHostname;
 
             DeviceInfo = new DeviceInfo();
+
+            _dc = dc;
 
             TempDict = new Dictionary<int, IHasPowerCycle>();
 
@@ -70,8 +76,10 @@ namespace Pdu_Wattbox_Epi
                 return;
             }
 
+            _props = dc.Properties.ToObject<Properties>();
+            _parseOutletNames = _props.ParseOutletNames;
+
             var outlets = new List<Outlet>();
-            
             var outletsToken = dc.Properties.SelectToken("outlets");
             if (outletsToken == null)
             {
@@ -80,8 +88,6 @@ namespace Pdu_Wattbox_Epi
             }
             if (outletsToken is JArray)
             {
-                _props = dc.Properties.ToObject<Properties>();
-
                 Debug.Console(0, this, "Found an Array");
                 outlets = _props.Outlets;
                 if (outlets == null)
@@ -126,11 +132,13 @@ namespace Pdu_Wattbox_Epi
             NameFeedback = new StringFeedback(() => Name);
             IsOnlineFeedback = new BoolFeedback(() => Comms.IsOnlineWattbox);
             OutletCountFeedback = new IntFeedback(() => OutletCount);
+            IpChangeFeedback = new BoolFeedback(() => _ipChanged);
 
             Feedbacks = new FeedbackCollection<Feedback>
             {
                 NameFeedback,
                 IsOnlineFeedback,
+                IpChangeFeedback,
                 OutletCountFeedback
             };
         }
@@ -172,6 +180,26 @@ namespace Pdu_Wattbox_Epi
                 if (outlet == null) continue;
                 outlet.SetPowerStatus(outletStatus[i]);
                 outlet.PowerIsOnFeedback.FireUpdate();
+            }
+        }
+
+        private void UpdateOutletName(List<string> outletName)
+        {
+            if (_parseOutletNames)
+            {
+                var actual = outletName.Count;
+                var configured = Outlets.Count;
+
+                if (configured != actual)
+                    Debug.Console(0, this, "The number of configured outlets ({0}) does not match the number of outlets on the device ({1}).", configured, actual);
+
+                for (var i = 0; i < actual; i++)
+                {
+                    var outlet = PduOutlets[i + 1] as WattboxOutlet;
+                    if (outlet == null) continue;
+                    outlet.SetName(outletName[i]);
+                    outlet.NameFeedback.FireUpdate();
+                }
             }
         }
 
@@ -239,10 +267,22 @@ namespace Pdu_Wattbox_Epi
                 bridge.AddJoinMap(Key, joinMap);
             }
 
-            JoinDataComplete joinData;
-            if (joinMap.Joins.TryGetValue("SetIpAddress", out joinData))
+            JoinDataComplete setIpJoinData;
+            if (joinMap.Joins.TryGetValue("SetIpAddress", out setIpJoinData))
             {
-                trilist.SetStringSigAction(joinData.JoinNumber, (s) => { SetIpAddress(s); });
+                trilist.SetStringSigAction(setIpJoinData.JoinNumber, (s) => { SetIpAddress(s); });
+            }
+
+            JoinDataComplete ipSetFbJoinData;
+            if (joinMap.Joins.TryGetValue("IpAddressSetFeedback", out ipSetFbJoinData))
+            {
+                IpChangeFeedback.OutputChange += (o, a) =>
+                {
+                    if (!a.BoolValue) return;
+                    trilist.PulseBool(ipSetFbJoinData.JoinNumber, 1000);
+                    _ipChanged = false;
+                    IpChangeFeedback.FireUpdate();
+                };
             }
 
             Debug.Console(1, this, "Linking to Trilist '{0}'", trilist.ID.ToString("X"));
@@ -278,21 +318,27 @@ namespace Pdu_Wattbox_Epi
         protected override void CustomSetConfig(DeviceConfig config)
         {
             ConfigWriter.UpdateDeviceConfig(config);
+            Debug.Console(0, this, "IP address changed to {0}. Restart Essentials to take effect.", _dc.Properties["control"]["tcpSshProperties"]["address"].ToString());
+
+            _ipChanged = true;
+            IpChangeFeedback.FireUpdate();
         }
 
         private void SetIpAddress(string hostname)
         {
             try
             {
-                if (hostname.Length > 2 &
-                    _dc.Properties["control"]["tcpSshProperties"]["address"].ToString() != hostname)
+                string currentHostname = _dc.Properties["control"]["tcpSshProperties"]["address"].ToString();
+
+                if (hostname.Length > 2)
                 {
-                    Debug.Console(2, this, "Changing IPAddress: {0}", hostname);
+                    if (currentHostname != hostname)
+                    {
+                        //UpdateHostname(hostname);
 
-                    UpdateHostname(hostname);
-
-                    _dc.Properties["control"]["tcpSshProperties"]["address"] = hostname;
-                    CustomSetConfig(_dc);
+                        _dc.Properties["control"]["tcpSshProperties"]["address"] = hostname;
+                        CustomSetConfig(_dc);
+                    }
                 }
             }
             catch (Exception e)

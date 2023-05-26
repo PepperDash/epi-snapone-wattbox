@@ -59,6 +59,7 @@ namespace Wattbox.Lib
         public bool IsLoggedIn { get; set; }
         public bool IsOnlineWattbox { get; set; }
         public OutletStatusUpdate UpdateOutletStatus { get; set; }
+        public OutletNameUpdate UpdateOutletName { get; set; }
         public OnlineStatusUpdate UpdateOnlineStatus { get; set; }
         public LoggedInStatusUpdate UpdateLoggedInStatus { get; set; }
         public FirmwareVersionUpdate UpdateFirmwareVersion { get; set; }
@@ -94,6 +95,11 @@ namespace Wattbox.Lib
         public void GetStatus()
         {
             SendLine("?OutletStatus");
+        }
+
+        public void GetNames()
+        {
+            SendLine("?OutletName");
         }
 
         #endregion
@@ -144,6 +150,17 @@ namespace Wattbox.Lib
                 return;
             }
 
+            if (data.Contains("?OutletName="))
+            {
+                var outletNameString = data.Substring(12);
+                Debug.Console(2, this, "name substring: {0}", outletNameString);
+                var outletNameList = outletNameString.Split(',').ToList();
+
+                var handler = UpdateOutletName;
+                if (handler != null) handler(outletNameList);
+
+                return;
+            }
 
             if (data.Contains("?Hostname="))
             {
@@ -228,6 +245,7 @@ namespace Wattbox.Lib
             if (data.Contains("!OutletSet"))
             {
                 GetStatus();
+                GetNames();
             }
         }
 
@@ -241,6 +259,7 @@ namespace Wattbox.Lib
             if (cmd.Contains("!OutletSet"))
             {
                 GetStatus();
+                GetNames();
             }
 
         }

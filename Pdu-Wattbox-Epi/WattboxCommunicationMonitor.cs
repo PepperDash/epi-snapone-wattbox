@@ -99,6 +99,19 @@ namespace Pdu_Wattbox_Epi
             }
         }
 
+        public OutletNameUpdate UpdateOutletName
+        {
+            get
+            {
+                return Communications == null ? null : Communications.UpdateOutletName;
+            }
+            set
+            {
+                if (Communications == null) return;
+                Communications.UpdateOutletName = value;
+            }
+        }
+
         public OnlineStatusUpdate UpdateOnlineStatus
         {
             get

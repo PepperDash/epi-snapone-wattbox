@@ -6,6 +6,8 @@ namespace Wattbox.Lib
 {
     public delegate void OutletStatusUpdate(List<bool> outletStatus);
 
+    public delegate void OutletNameUpdate(List<string> outletName);
+
     public delegate void OnlineStatusUpdate(bool online);
 
     public delegate void LoggedInStatusUpdate(bool status);
@@ -22,6 +24,7 @@ namespace Wattbox.Lib
         bool IsOnlineWattbox { get;  }
 
         OutletStatusUpdate UpdateOutletStatus { get; set; }
+        OutletNameUpdate UpdateOutletName { get; set; }
         OnlineStatusUpdate UpdateOnlineStatus { get; set; }
         LoggedInStatusUpdate UpdateLoggedInStatus { get; set; }
         FirmwareVersionUpdate UpdateFirmwareVersion { get; set; }

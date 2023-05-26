@@ -12,23 +12,42 @@ namespace Pdu_Wattbox_Epi
 
         private void SetIpChangeJoin(uint joinStart)
         {
-            var joinData = new JoinData
+            var ipSetJoinData = new JoinData
             {
 
-                JoinNumber = (uint)(2 + joinStart - 1),
+                JoinNumber = (2 + joinStart - 1),
                 JoinSpan = 1
             };
 
-            var joinMetaData = new JoinMetadata
+            var ipSetJoinMetaData = new JoinMetadata
             {
                 Description = "Set device IP Address",
                 JoinCapabilities = eJoinCapabilities.FromSIMPL,
-                JoinType = eJoinType.DigitalSerial
+                JoinType = eJoinType.Serial
             };
 
-            var joinDataComplete = new JoinDataComplete(joinData, joinMetaData);
+            var ipSetJoinDataComplete = new JoinDataComplete(ipSetJoinData, ipSetJoinMetaData);
 
-            Joins.Add("SetIpAddress", joinDataComplete);
+            Joins.Add("SetIpAddress", ipSetJoinDataComplete);
+
+            var setFbJoinData = new JoinData
+            {
+
+                JoinNumber = (2 + joinStart - 1),
+                JoinSpan = 1
+            };
+
+            var setFbJoinMetaData = new JoinMetadata
+            {
+                Description = "IP Address Change Feedback",
+                JoinCapabilities = eJoinCapabilities.ToSIMPL,
+                JoinType = eJoinType.Digital
+            };
+
+            var setFbJoinDataComplete = new JoinDataComplete(setFbJoinData, setFbJoinMetaData);
+
+            Joins.Add("IpAddressSetFeedback", setFbJoinDataComplete);
+
         }
 
         public WattboxJoinmapDynamic(uint joinStart, IEnumerable<KeyValuePair<int, IHasPowerCycle>> pduOutlets)
