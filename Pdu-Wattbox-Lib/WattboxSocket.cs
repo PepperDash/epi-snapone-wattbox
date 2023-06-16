@@ -95,12 +95,9 @@ namespace Wattbox.Lib
         public void GetStatus()
         {
             SendLine("?OutletStatus");
-        }
-
-        public void GetNames()
-        {
             SendLine("?OutletName");
         }
+
 
         #endregion
 
@@ -125,6 +122,7 @@ namespace Wattbox.Lib
             if (args.Client.IsConnected)
             {
                 SendLine("?Hostname");
+                SendLine("?OutletName");
             }
         }
 
@@ -155,6 +153,12 @@ namespace Wattbox.Lib
                 var outletNameString = data.Substring(12);
                 Debug.Console(2, this, "name substring: {0}", outletNameString);
                 var outletNameList = outletNameString.Split(',').ToList();
+
+                for (int i = 0; i < outletNameList.Count; i++)
+                {
+                    var tempName = outletNameList[i];
+                    outletNameList[i] = tempName.Substring(1, tempName.Length - 2);
+                }
 
                 var handler = UpdateOutletName;
                 if (handler != null) handler(outletNameList);
@@ -245,7 +249,6 @@ namespace Wattbox.Lib
             if (data.Contains("!OutletSet"))
             {
                 GetStatus();
-                GetNames();
             }
         }
 
@@ -259,7 +262,6 @@ namespace Wattbox.Lib
             if (cmd.Contains("!OutletSet"))
             {
                 GetStatus();
-                GetNames();
             }
 
         }
