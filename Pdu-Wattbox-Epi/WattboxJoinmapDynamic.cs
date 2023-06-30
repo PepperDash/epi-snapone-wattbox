@@ -10,6 +10,46 @@ namespace Pdu_Wattbox_Epi
     {
         public readonly PduJoinMapBase BaseJoinMap;
 
+        private void SetIpChangeJoin(uint joinStart)
+        {
+            var ipSetJoinData = new JoinData
+            {
+
+                JoinNumber = (2 + joinStart - 1),
+                JoinSpan = 1
+            };
+
+            var ipSetJoinMetaData = new JoinMetadata
+            {
+                Description = "Set device IP Address",
+                JoinCapabilities = eJoinCapabilities.FromSIMPL,
+                JoinType = eJoinType.Serial
+            };
+
+            var ipSetJoinDataComplete = new JoinDataComplete(ipSetJoinData, ipSetJoinMetaData);
+
+            Joins.Add("SetIpAddress", ipSetJoinDataComplete);
+
+            var setFbJoinData = new JoinData
+            {
+
+                JoinNumber = (2 + joinStart - 1),
+                JoinSpan = 1
+            };
+
+            var setFbJoinMetaData = new JoinMetadata
+            {
+                Description = "IP Address Change Feedback",
+                JoinCapabilities = eJoinCapabilities.ToSIMPL,
+                JoinType = eJoinType.Digital
+            };
+
+            var setFbJoinDataComplete = new JoinDataComplete(setFbJoinData, setFbJoinMetaData);
+
+            Joins.Add("IpAddressSetFeedback", setFbJoinDataComplete);
+
+        }
+
         public WattboxJoinmapDynamic(uint joinStart, IEnumerable<KeyValuePair<int, IHasPowerCycle>> pduOutlets)
             : base(joinStart, typeof (WattboxJoinmapDynamic))
         {
@@ -19,6 +59,7 @@ namespace Pdu_Wattbox_Epi
             Joins.Add("Name", BaseJoinMap.Joins["Name"]);
             Joins.Add("Online", BaseJoinMap.Joins["Online"]);
             Joins.Add("OutletCount", BaseJoinMap.Joins["OutletCount"]);
+            SetIpChangeJoin(joinStart);
 
             foreach (var index in pduOutlets.Select(outlet => outlet.Key))
             {
@@ -30,6 +71,7 @@ namespace Pdu_Wattbox_Epi
             }
 
         }
+        
 
         private void SetOutletNameJoinData(int index)
         {

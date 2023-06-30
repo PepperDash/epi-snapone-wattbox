@@ -12,12 +12,13 @@ using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.DeviceInfo;
+using PepperDash.Essentials.Core.Devices;
 using PepperDash_Essentials_Core.Devices;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace Pdu_Wattbox_Epi
 {
-    public class WattboxController : EssentialsBridgeableDevice, IHasControlledPowerOutlets, IDeviceInfoProvider, ICommunicationMonitor
+    public class WattboxController : ReconfigurableDevice, IHasControlledPowerOutlets, IDeviceInfoProvider, ICommunicationMonitor, IBridgeAdvanced
     {
         private const long PollTime = 45000;
         //private readonly IWattboxCommunications _comms;
@@ -33,11 +34,15 @@ namespace Pdu_Wattbox_Epi
         public readonly List<Outlet> Outlets;
 
         public StatusMonitorBase CommunicationMonitor { get; set; }
-    
+
+        private DeviceConfig _dc;
 
         public readonly int OutletCount;
+        private bool _ipChanged;
+        private bool _parseOutletNames;
 
         public BoolFeedback IsOnlineFeedback;
+        public BoolFeedback IpChangeFeedback;
         public IntFeedback OutletCountFeedback;
         public StringFeedback NameFeedback;
 
@@ -45,13 +50,14 @@ namespace Pdu_Wattbox_Epi
 
 
         public WattboxController(string key, string name, WattboxCommunicationMonitor comms, DeviceConfig dc)
-            : base(key, name)
+            : base(dc)
         {
             CommunicationMonitor = comms;
 
             Comms = comms;
 
             Comms.UpdateOutletStatus = UpdateOutletStatus;
+            Comms.UpdateOutletName = UpdateOutletName;
             Comms.UpdateOnlineStatus = UpdateOnlineStatus;
             Comms.UpdateLoggedInStatus = UpdateLoggedInStatus;
             Comms.UpdateFirmwareVersion = UpdateFirmwareVersion;
@@ -59,6 +65,8 @@ namespace Pdu_Wattbox_Epi
             Comms.UpdateHostname = UpdateHostname;
 
             DeviceInfo = new DeviceInfo();
+
+            _dc = dc;
 
             TempDict = new Dictionary<int, IHasPowerCycle>();
 
@@ -68,8 +76,10 @@ namespace Pdu_Wattbox_Epi
                 return;
             }
 
+            _props = dc.Properties.ToObject<Properties>();
+            _parseOutletNames = _props.ParseOutletNames;
+
             var outlets = new List<Outlet>();
-            
             var outletsToken = dc.Properties.SelectToken("outlets");
             if (outletsToken == null)
             {
@@ -78,8 +88,6 @@ namespace Pdu_Wattbox_Epi
             }
             if (outletsToken is JArray)
             {
-                _props = dc.Properties.ToObject<Properties>();
-
                 Debug.Console(0, this, "Found an Array");
                 outlets = _props.Outlets;
                 if (outlets == null)
@@ -124,11 +132,13 @@ namespace Pdu_Wattbox_Epi
             NameFeedback = new StringFeedback(() => Name);
             IsOnlineFeedback = new BoolFeedback(() => Comms.IsOnlineWattbox);
             OutletCountFeedback = new IntFeedback(() => OutletCount);
+            IpChangeFeedback = new BoolFeedback(() => _ipChanged);
 
             Feedbacks = new FeedbackCollection<Feedback>
             {
                 NameFeedback,
                 IsOnlineFeedback,
+                IpChangeFeedback,
                 OutletCountFeedback
             };
         }
@@ -170,6 +180,26 @@ namespace Pdu_Wattbox_Epi
                 if (outlet == null) continue;
                 outlet.SetPowerStatus(outletStatus[i]);
                 outlet.PowerIsOnFeedback.FireUpdate();
+            }
+        }
+
+        private void UpdateOutletName(List<string> outletName)
+        {
+            if (_parseOutletNames)
+            {
+                var actual = outletName.Count;
+                var configured = Outlets.Count;
+
+                if (configured != actual)
+                    Debug.Console(0, this, "The number of configured outlets ({0}) does not match the number of outlets on the device ({1}).", configured, actual);
+
+                for (var i = 0; i < actual; i++)
+                {
+                    var outlet = PduOutlets[i + 1] as WattboxOutlet;
+                    if (outlet == null) continue;
+                    outlet.SetName(outletName[i]);
+                    outlet.NameFeedback.FireUpdate();
+                }
             }
         }
 
@@ -223,7 +253,7 @@ namespace Pdu_Wattbox_Epi
             Comms.SetOutlet(index, (int)action);
         }
 
-        public override void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
+        public void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
         {
             var joinMap = new WattboxJoinmapDynamic(joinStart, PduOutlets);
 
@@ -235,6 +265,24 @@ namespace Pdu_Wattbox_Epi
             if (bridge != null)
             {
                 bridge.AddJoinMap(Key, joinMap);
+            }
+
+            JoinDataComplete setIpJoinData;
+            if (joinMap.Joins.TryGetValue("SetIpAddress", out setIpJoinData))
+            {
+                trilist.SetStringSigAction(setIpJoinData.JoinNumber, (s) => { SetIpAddress(s); });
+            }
+
+            JoinDataComplete ipSetFbJoinData;
+            if (joinMap.Joins.TryGetValue("IpAddressSetFeedback", out ipSetFbJoinData))
+            {
+                IpChangeFeedback.OutputChange += (o, a) =>
+                {
+                    if (!a.BoolValue) return;
+                    trilist.PulseBool(ipSetFbJoinData.JoinNumber, 1000);
+                    _ipChanged = false;
+                    IpChangeFeedback.FireUpdate();
+                };
             }
 
             Debug.Console(1, this, "Linking to Trilist '{0}'", trilist.ID.ToString("X"));
@@ -265,6 +313,39 @@ namespace Pdu_Wattbox_Epi
                     item.FireUpdate();
                 }
             };
+        }
+
+        protected override void CustomSetConfig(DeviceConfig config)
+        {
+            ConfigWriter.UpdateDeviceConfig(config);
+            Debug.Console(0, this, "IP address changed to {0}. Restart Essentials to take effect.", _dc.Properties["control"]["tcpSshProperties"]["address"].ToString());
+
+            _ipChanged = true;
+            IpChangeFeedback.FireUpdate();
+        }
+
+        private void SetIpAddress(string hostname)
+        {
+            try
+            {
+                string currentHostname = _dc.Properties["control"]["tcpSshProperties"]["address"].ToString();
+
+                if (hostname.Length > 2)
+                {
+                    if (currentHostname != hostname)
+                    {
+                        //UpdateHostname(hostname);
+
+                        _dc.Properties["control"]["tcpSshProperties"]["address"] = hostname;
+                        CustomSetConfig(_dc);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                if (Debug.Level == 2)
+                    Debug.Console(2, this, "Error SetIpAddress: '{0}'", e);
+            }
         }
 
         #region Overrides of Device

@@ -53,6 +53,10 @@ namespace Pdu_Wattbox_Epi
             PowerStatus = status;
         }
 
+        public void SetName(string name)
+        {
+            Name = name;
+        }
 
         public void PowerCycle()
         {

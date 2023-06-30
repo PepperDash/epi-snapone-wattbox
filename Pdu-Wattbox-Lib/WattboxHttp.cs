@@ -47,6 +47,7 @@ namespace Wattbox.Lib
         #region IWattboxCommunications Members
 
         public OutletStatusUpdate UpdateOutletStatus { get; set; }
+        public OutletNameUpdate UpdateOutletName { get; set; }
         public OnlineStatusUpdate UpdateOnlineStatus { get; set; }
         public LoggedInStatusUpdate UpdateLoggedInStatus { get; set; }
         public FirmwareVersionUpdate UpdateFirmwareVersion { get; set; }
@@ -209,12 +210,19 @@ namespace Wattbox.Lib
 
                 var result = xml.Element("outlet_status").Value;
 
-
                 var outletStatus = result.Split(',').Select(s => s == "1").ToList();
 
                 var handler = UpdateOutletStatus;
 
                 if (handler != null) handler(outletStatus);
+
+                var outletNamesResult = xml.Element("outlet_name").Value;
+
+                var outletNames = outletNamesResult.Split(',').ToList();
+
+                var namesHandler = UpdateOutletName;
+
+                if (namesHandler != null) namesHandler(outletNames);
                 
             }
             else
