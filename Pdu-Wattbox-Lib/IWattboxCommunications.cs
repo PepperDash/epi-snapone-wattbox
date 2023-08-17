@@ -18,7 +18,7 @@ namespace Wattbox.Lib
 
     public delegate void SerialUpdate(string serial);
 
-    public interface IWattboxCommunications : IKeyed
+    public interface IWattboxCommunications : IKeyed, IBasicCommunication
     {
         bool IsLoggedIn { get; }
         bool IsOnlineWattbox { get;  }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Crestron.SimplSharp;
+using Crestron.SimplSharp.Net.Http;
 using Crestron.SimplSharpPro.DeviceSupport;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -13,6 +14,7 @@ using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.DeviceInfo;
 using PepperDash.Essentials.Core.Devices;
+using PepperDash.Essentials.Devices.Common.VideoCodec.Cisco;
 using PepperDash_Essentials_Core.Devices;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
@@ -86,18 +88,22 @@ namespace Pdu_Wattbox_Epi
                 Debug.Console(0, this, "OutletsToken is null");
                 return;
             }
-            if (outletsToken is JArray)
+
+            var outletsArray = outletsToken as JArray;
+            var outletsDict = outletsToken as JObject;
+            if (outletsArray != null && outletsArray.Count > 1)
             {
                 Debug.Console(0, this, "Found an Array");
-                outlets = _props.Outlets;
-                if (outlets == null)
+                outlets = (outletsArray).Select(x => new Outlet
                 {
-                    Debug.Console(0, this,"That Array is Null");
-                    return;
-                }
-            }
+                    Key = (string)x["key"],
+                    OutletNumber = (int)x["outletNumber"],
+                    Enabled = (bool)x["enabled"],
+                    Name = (string)x["name"]
 
-            else if (outletsToken is JObject)
+                }).ToList();
+            }
+            else if (outletsDict != null)
             {
                 Debug.Console(0, this, "Found an Object");
 
@@ -141,6 +147,29 @@ namespace Pdu_Wattbox_Epi
                 IpChangeFeedback,
                 OutletCountFeedback
             };
+        }
+
+        private static string SanitizeIpAddress(string ipAddress)
+        {
+            var address = IPAddress.Parse(ipAddress);
+            return address == null ? ipAddress : address.ToString();
+        }
+
+        private void ResolveHostData(string data)
+        {
+            try
+            {
+                var hostEntry = Dns.GetHostEntry(data);
+                if (hostEntry == null) return;
+                if (DeviceInfo == null) DeviceInfo = new DeviceInfo();
+                DeviceInfo.IpAddress = hostEntry.AddressList[0].ToString();
+                DeviceInfo.HostName = hostEntry.HostName;
+
+            }
+            catch (Exception ex)
+            {
+                Debug.Console(0, this, "Unable to resolve host data : {0}", ex.Message);
+            }
         }
 
 
@@ -410,6 +439,13 @@ namespace Pdu_Wattbox_Epi
 
 
         public event DeviceInfoChangeHandler DeviceInfoChanged;
+
+        public void OnDeviceInfoChanged()
+        {
+            var handler = DeviceInfoChanged;
+            if (handler == null) return;
+            handler(this, new DeviceInfoEventArgs(DeviceInfo));
+        }
 
         public void UpdateDeviceInfo()
         {

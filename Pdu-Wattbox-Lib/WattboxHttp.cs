@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using Crestron.SimplSharp;
 using Crestron.SimplSharp.CrestronXmlLinq;
 using Crestron.SimplSharp.Net.Http;
 using PepperDash.Core;
 
 namespace Wattbox.Lib
 {
-    public class WattboxHttp : IWattboxCommunications
+    public class WattboxHttp : IWattboxCommunications, IBasicCommunication
     {
         private readonly string _authorization;
         private readonly HttpClient _client = new HttpClient();
@@ -130,6 +129,12 @@ namespace Wattbox.Lib
 
                     IsOnlineWattbox = (responseCode == 200 && responseCode != 401);
 
+                    var handler = TextReceived;
+                    if (handler != null)
+                    {
+                        handler(this, new GenericCommMethodReceiveTextArgs());
+                    }
+
 
                     if (!String.IsNullOrEmpty(response.ContentString))
                     {
@@ -230,5 +235,39 @@ namespace Wattbox.Lib
                 GetStatus();
             }
         }
+
+        #region IBasicCommunication Members
+
+        public void SendBytes(byte[] bytes)
+        {
+            Debug.Console(0, this, "Unsupported - Added to adhere to interface");
+        }
+
+        public void SendText(string text)
+        {
+            Debug.Console(0, this, "Unsupported - Added to adhere to interface");
+        }
+
+        #endregion
+
+        #region ICommunicationReceiver Members
+
+        public event EventHandler<GenericCommMethodReceiveBytesArgs> BytesReceived;
+
+        public void Disconnect()
+        {
+            Debug.Console(0, this, "Unsupported - Added to adhere to interface");
+        }
+
+        public bool IsConnected
+        {
+            get { return IsOnlineWattbox; }
+        }
+
+        public event EventHandler<GenericCommMethodReceiveTextArgs> TextReceived;
+
+
+
+        #endregion
     }
 }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Collections.Generic;
-using PepperDash.Core;
+﻿using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PepperDash.Essentials.Core;
@@ -16,7 +13,13 @@ namespace Pdu_Wattbox_Epi {
         [JsonProperty("parseOutletNames")]
         public bool ParseOutletNames { get; set; }
         [JsonProperty("outlets")]
-        public List<Outlet> Outlets { get; set; }
+        public JObject Outlets { get; set; }
+
+        public Properties()
+        {
+            //Outlets = new List<Outlet>();
+            //OutletsDictionary = new Dictionary<string, OutletDict>();
+        }
     }
 
     public class Outlet {

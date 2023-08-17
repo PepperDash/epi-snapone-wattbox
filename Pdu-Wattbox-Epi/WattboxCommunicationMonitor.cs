@@ -20,7 +20,6 @@ namespace Pdu_Wattbox_Epi
         public SerialUpdate UpdateSerial { get; set; }
         public HostnameUpdate UpdateHostname { get; set; }
 
-
         public long PollTime
         {
             get
@@ -41,20 +40,40 @@ namespace Pdu_Wattbox_Epi
             UpdateFirmwareVersion = Communications.UpdateFirmwareVersion;
             UpdateSerial = Communications.UpdateSerial;
             UpdateHostname = Communications.UpdateHostname;
+
+            Communications.TextReceived += Communications_TextReceived;
+
+            
         }
+
+        void Communications_TextReceived(object sender, GenericCommMethodReceiveTextArgs e)
+        {
+            Status = MonitorStatus.IsOk;
+            OnStatusChange(Status);
+            ResetErrorTimers();
+            var handler = TextReceived;
+            if (handler == null) return;
+            if (e == null) return;
+            handler(this, e);
+        }
+
+
 
         public IWattboxCommunications Communications;
 
         public override void Start()
         {
-            if (_controlMethod != eControlMethod.Http && _controlMethod != eControlMethod.Https) return;
+            if (_controlMethod != eControlMethod.Http && _controlMethod != eControlMethod.Https && _controlMethod != eControlMethod.Ssh) return;
             _pollTimer = new CTimer(o => GetStatus(), null, 0, PollTime);
         }
 
         public override void Stop()
         {
-            if (_controlMethod != eControlMethod.Http && _controlMethod != eControlMethod.Https) return;
+            if (_controlMethod != eControlMethod.Http && _controlMethod != eControlMethod.Https && _controlMethod != eControlMethod.Ssh) return;
+            if (_pollTimer == null) return;
+            _pollTimer.Stop();
             _pollTimer = null;
+            StopErrorTimers();
         }
 
         public void Connect()
@@ -65,6 +84,7 @@ namespace Pdu_Wattbox_Epi
 
         public void GetStatus()
         {
+            StartErrorTimers();
             if (Communications == null) return;
             Communications.GetStatus();
         }
@@ -138,5 +158,34 @@ namespace Pdu_Wattbox_Epi
             }
         }
 
+
+        #region IBasicCommunication Members
+
+        public void SendBytes(byte[] bytes)
+        {
+            Communications.SendBytes(bytes);
+        }
+
+        public void SendText(string text)
+        {
+            Communications.SendText(text);
+        }
+
+        #endregion
+
+        #region ICommunicationReceiver Members
+
+        public event EventHandler<GenericCommMethodReceiveBytesArgs> BytesReceived;
+
+        public void Disconnect()
+        {
+            Communications.Disconnect();
+        }
+
+        public bool IsConnected { get; private set; }
+
+        public event EventHandler<GenericCommMethodReceiveTextArgs> TextReceived;
+
+        #endregion
     }
 }

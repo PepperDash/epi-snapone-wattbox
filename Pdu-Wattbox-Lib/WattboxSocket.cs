@@ -43,7 +43,23 @@ namespace Wattbox.Lib
             
             _portGather.LineReceived += PortGather_LineReceived;
 
-            //AddPostActivationAction(Communication.Connect);
+            Communication.BytesReceived += Communication_BytesReceived;
+            Communication.TextReceived += Communication_TextReceived;
+        }
+
+        void Communication_BytesReceived(object sender, GenericCommMethodReceiveBytesArgs e)
+        {
+            if (e == null) return;
+            var handler = BytesReceived;
+            if (handler == null) return;
+            handler(this, e);
+        }
+        void Communication_TextReceived(object sender, GenericCommMethodReceiveTextArgs e)
+        {
+            if (e == null) return;
+            var handler = TextReceived;
+            if (handler == null) return;
+            handler(this, e);
         }
 
         public string Name { get; set; }
@@ -265,5 +281,37 @@ namespace Wattbox.Lib
             }
 
         }
+
+        #region IBasicCommunication Members
+
+        public void SendBytes(byte[] bytes)
+        {
+            Communication.SendBytes(bytes);
+        }
+
+        public void SendText(string text)
+        {
+            Communication.SendText(text);
+        }
+
+        #endregion
+
+        #region ICommunicationReceiver Members
+
+        public event EventHandler<GenericCommMethodReceiveBytesArgs> BytesReceived;
+
+        public void Disconnect()
+        {
+            Communication.Disconnect();
+        }
+
+        public bool IsConnected
+        {
+            get { return Communication.IsConnected; }
+        }
+
+        public event EventHandler<GenericCommMethodReceiveTextArgs> TextReceived;
+
+        #endregion
     }
 }
