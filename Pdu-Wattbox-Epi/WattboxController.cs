@@ -210,21 +210,23 @@ namespace Pdu_Wattbox_Epi
 
         private void UpdateOutletName(List<string> outletName)
         {
-            if (_parseOutletNames)
+            if (!_parseOutletNames)
             {
-                var actual = outletName.Count;
-                var configured = Outlets.Count;
+                return;
+            }
 
-                if (configured != actual)
-                    Debug.Console(0, this, "The number of configured outlets ({0}) does not match the number of outlets on the device ({1}).", configured, actual);
+            var actual = outletName.Count;
+            var configured = Outlets.Count;
 
-                for (var i = 0; i < actual; i++)
-                {
-                    var outlet = PduOutlets[i + 1] as WattboxOutlet;
-                    if (outlet == null) continue;
-                    outlet.SetName(outletName[i]);
-                    outlet.NameFeedback.FireUpdate();
-                }
+            if (configured != actual)
+                Debug.Console(0, this, "The number of configured outlets ({0}) does not match the number of outlets on the device ({1}).", configured, actual);
+
+            for (var i = 0; i < actual; i++)
+            {
+                var outlet = PduOutlets[i + 1] as WattboxOutlet;
+                if (outlet == null) continue;
+                outlet.SetName(outletName[i]);
+                outlet.NameFeedback.FireUpdate();
             }
         }
 
