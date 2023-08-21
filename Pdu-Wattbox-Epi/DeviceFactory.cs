@@ -32,11 +32,6 @@ namespace Pdu_Wattbox_Epi
 
             var method = controlProperties.Method;
 
-            var methodString = method.ToString();
-
-            var newKey = String.Format("{0}-{1}", dc.Key, methodString);
-            var newName = String.Format("{0}-{1}", dc.Name, methodString);
-
             if (method == eControlMethod.Http || method == eControlMethod.Https)
             {
                 Debug.Console(1, "Creating Wattbox using HTTP Comms");

@@ -4,9 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Crestron.SimplSharp;
-using Crestron.SimplSharp.Net.Http;
 using Crestron.SimplSharpPro.DeviceSupport;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
@@ -14,7 +12,6 @@ using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.DeviceInfo;
 using PepperDash.Essentials.Core.Devices;
-using PepperDash.Essentials.Devices.Common.VideoCodec.Cisco;
 using PepperDash_Essentials_Core.Devices;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
@@ -58,6 +55,7 @@ namespace Pdu_Wattbox_Epi
 
             Comms = comms;
 
+            //set delegates
             Comms.UpdateOutletStatus = UpdateOutletStatus;
             Comms.UpdateOutletName = UpdateOutletName;
             Comms.UpdateOnlineStatus = UpdateOnlineStatus;
@@ -171,8 +169,6 @@ namespace Pdu_Wattbox_Epi
                 Debug.Console(0, this, "Unable to resolve host data : {0}", ex.Message);
             }
         }
-
-
 
         private static List<Outlet> ListConvert(Dictionary<string, OutletDict> dict )
         {
@@ -357,18 +353,20 @@ namespace Pdu_Wattbox_Epi
         {
             try
             {
-                string currentHostname = _dc.Properties["control"]["tcpSshProperties"]["address"].ToString();
+                var currentHostname = _dc.Properties["control"]["tcpSshProperties"]["address"].ToString();
 
-                if (hostname.Length > 2)
+                if (hostname.Length <= 2)
                 {
-                    if (currentHostname != hostname)
-                    {
-                        //UpdateHostname(hostname);
-
-                        _dc.Properties["control"]["tcpSshProperties"]["address"] = hostname;
-                        CustomSetConfig(_dc);
-                    }
+                    return;
                 }
+                if (currentHostname == hostname)
+                {
+                    return;
+                }
+                //UpdateHostname(hostname);
+
+                _dc.Properties["control"]["tcpSshProperties"]["address"] = hostname;
+                CustomSetConfig(_dc);
             }
             catch (Exception e)
             {
@@ -429,14 +427,7 @@ namespace Pdu_Wattbox_Epi
 
         }
 
-        #region ICommunicationMonitor Members
-
-
-        #endregion
-
         #region IDeviceInfoProvider Members
-
-
 
         public event DeviceInfoChangeHandler DeviceInfoChanged;
 
@@ -472,12 +463,6 @@ namespace Pdu_Wattbox_Epi
                 return false;
             }
         }
-
-
-        #endregion
-
-        #region ICommunicationMonitor Members
-
 
         #endregion
     }
