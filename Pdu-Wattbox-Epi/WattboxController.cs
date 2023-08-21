@@ -379,15 +379,13 @@ namespace Pdu_Wattbox_Epi
 
         #region Overrides of Device
 
-        public override bool CustomActivate()
+        public override void Initialize()
         {
             Comms.Connect();
             Comms.Start();
-            return base.CustomActivate();
         }
 
         #endregion
-
 
         private string GetIpAddress(string hostname)
         {
