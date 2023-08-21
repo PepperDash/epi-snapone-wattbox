@@ -173,7 +173,10 @@ namespace Pdu_Wattbox_Epi
             Communications.Disconnect();
         }
 
-        public bool IsConnected { get; private set; }
+        public bool IsConnected
+        {
+            get { return Communications.IsConnected; }
+        }
 
         public event EventHandler<GenericCommMethodReceiveTextArgs> TextReceived;
 
