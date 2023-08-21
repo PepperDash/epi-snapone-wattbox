@@ -1,6 +1,7 @@
 ﻿using System;
 using Crestron.SimplSharpPro.DeviceSupport;
 using PepperDash.Essentials.Core;
+using PepperDash.Essentials.Core.Bridges;
 using PepperDash_Essentials_Core.Devices;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
@@ -105,6 +106,30 @@ namespace Pdu_Wattbox_Epi
                 }
             };
 
+        }
+
+        public void LinkOutlet(BasicTriList trilist, PduJoinMapBase joinMap, int offset)
+        {
+            EnabledFeedback.LinkInputSig(trilist.BooleanInput[(uint)(joinMap.OutletEnabled.JoinNumber + offset)]);
+            NameFeedback.LinkInputSig(trilist.StringInput[(uint)(joinMap.OutletName.JoinNumber + offset)]);
+            PowerIsOnFeedback.LinkInputSig(trilist.BooleanInput[(uint)(joinMap.OutletPowerOn.JoinNumber + offset)]);
+            PowerIsOnFeedback.LinkComplementInputSig(trilist.BooleanInput[(uint)(joinMap.OutletPowerOff.JoinNumber + offset)]);
+
+            trilist.SetSigTrueAction((uint)(joinMap.OutletPowerOn.JoinNumber + offset), PowerOn);
+            trilist.SetSigTrueAction((uint)(joinMap.OutletPowerOff.JoinNumber + offset), PowerOff);
+            trilist.SetSigTrueAction((uint)(joinMap.OutletPowerCycle.JoinNumber + offset), PowerCycle);
+
+            trilist.OnlineStatusChange += (d, args) =>
+            {
+                if (!args.DeviceOnLine)
+                {
+                    return;
+                }
+                foreach (var item in Feedbacks)
+                {
+                    item.FireUpdate();
+                }
+            };
         }
 
     }

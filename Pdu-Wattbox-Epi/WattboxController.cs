@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Crestron.SimplSharp;
+using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
 using Newtonsoft.Json.Linq;
 using PepperDash.Core;
@@ -282,7 +283,7 @@ namespace Pdu_Wattbox_Epi
 
         public void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
         {
-            var joinMap = new WattboxJoinmapDynamic(joinStart, PduOutlets);
+            var joinMap = new PduJoinMapBase(joinStart);
 
             var customJoins = JoinMapHelper.TryGetJoinMapAdvancedForDevice(joinMapKey);
 
@@ -297,7 +298,7 @@ namespace Pdu_Wattbox_Epi
             JoinDataComplete setIpJoinData;
             if (joinMap.Joins.TryGetValue("SetIpAddress", out setIpJoinData))
             {
-                trilist.SetStringSigAction(setIpJoinData.JoinNumber, (s) => { SetIpAddress(s); });
+                trilist.SetStringSigAction(setIpJoinData.JoinNumber, SetIpAddress);
             }
 
             JoinDataComplete ipSetFbJoinData;
@@ -316,16 +317,20 @@ namespace Pdu_Wattbox_Epi
 
             Debug.Console(2, this, "There are {0} Outlets", Outlets.Count());
 
-            IsOnlineFeedback.LinkInputSig(trilist.BooleanInput[joinMap.BaseJoinMap.Online.JoinNumber]);
+            var onlineSig = trilist.BooleanInput[joinMap.Online.JoinNumber];
 
-            NameFeedback.LinkInputSig(trilist.StringInput[joinMap.BaseJoinMap.Name.JoinNumber]);
+            IsOnlineFeedback.LinkInputSig(onlineSig);
 
-
-            if ((int)joinMap.BaseJoinMap.OutletName.JoinNumber - (int)joinStart > 0)
+            NameFeedback.LinkInputSig(trilist.StringInput[joinMap.Name.JoinNumber]);
+ 
+            if ((int)joinMap.OutletName.JoinNumber - (int)joinStart > 0)
             {
+                var index = 0;
                 foreach (var o in PduOutlets.Select(outlet => outlet.Value).OfType<WattboxOutlet>())
                 {
-                    o.LinkOutlet(trilist, joinMap);
+                    var i = index;
+                    o.LinkOutlet(trilist, joinMap, i);
+                    index++;
                 }
             }
 
