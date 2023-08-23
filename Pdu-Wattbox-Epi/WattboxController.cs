@@ -4,9 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Crestron.SimplSharp;
-using Crestron.SimplSharp.Net.Http;
+using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
@@ -14,7 +13,6 @@ using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.DeviceInfo;
 using PepperDash.Essentials.Core.Devices;
-using PepperDash.Essentials.Devices.Common.VideoCodec.Cisco;
 using PepperDash_Essentials_Core.Devices;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
@@ -58,6 +56,7 @@ namespace Pdu_Wattbox_Epi
 
             Comms = comms;
 
+            //set delegates
             Comms.UpdateOutletStatus = UpdateOutletStatus;
             Comms.UpdateOutletName = UpdateOutletName;
             Comms.UpdateOnlineStatus = UpdateOnlineStatus;
@@ -172,8 +171,6 @@ namespace Pdu_Wattbox_Epi
             }
         }
 
-
-
         private static List<Outlet> ListConvert(Dictionary<string, OutletDict> dict )
         {
             return (from outletDict in dict let key = outletDict.Key let value = outletDict.Value select new Outlet(key, value)).ToList();
@@ -214,21 +211,23 @@ namespace Pdu_Wattbox_Epi
 
         private void UpdateOutletName(List<string> outletName)
         {
-            if (_parseOutletNames)
+            if (!_parseOutletNames)
             {
-                var actual = outletName.Count;
-                var configured = Outlets.Count;
+                return;
+            }
 
-                if (configured != actual)
-                    Debug.Console(0, this, "The number of configured outlets ({0}) does not match the number of outlets on the device ({1}).", configured, actual);
+            var actual = outletName.Count;
+            var configured = Outlets.Count;
 
-                for (var i = 0; i < actual; i++)
-                {
-                    var outlet = PduOutlets[i + 1] as WattboxOutlet;
-                    if (outlet == null) continue;
-                    outlet.SetName(outletName[i]);
-                    outlet.NameFeedback.FireUpdate();
-                }
+            if (configured != actual)
+                Debug.Console(0, this, "The number of configured outlets ({0}) does not match the number of outlets on the device ({1}).", configured, actual);
+
+            for (var i = 0; i < actual; i++)
+            {
+                var outlet = PduOutlets[i + 1] as WattboxOutlet;
+                if (outlet == null) continue;
+                outlet.SetName(outletName[i]);
+                outlet.NameFeedback.FireUpdate();
             }
         }
 
@@ -284,7 +283,7 @@ namespace Pdu_Wattbox_Epi
 
         public void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
         {
-            var joinMap = new WattboxJoinmapDynamic(joinStart, PduOutlets);
+            var joinMap = new PduJoinMapBase(joinStart);
 
             var customJoins = JoinMapHelper.TryGetJoinMapAdvancedForDevice(joinMapKey);
 
@@ -299,7 +298,7 @@ namespace Pdu_Wattbox_Epi
             JoinDataComplete setIpJoinData;
             if (joinMap.Joins.TryGetValue("SetIpAddress", out setIpJoinData))
             {
-                trilist.SetStringSigAction(setIpJoinData.JoinNumber, (s) => { SetIpAddress(s); });
+                trilist.SetStringSigAction(setIpJoinData.JoinNumber, SetIpAddress);
             }
 
             JoinDataComplete ipSetFbJoinData;
@@ -318,16 +317,20 @@ namespace Pdu_Wattbox_Epi
 
             Debug.Console(2, this, "There are {0} Outlets", Outlets.Count());
 
-            IsOnlineFeedback.LinkInputSig(trilist.BooleanInput[joinMap.BaseJoinMap.Online.JoinNumber]);
+            var onlineSig = trilist.BooleanInput[joinMap.Online.JoinNumber];
 
-            NameFeedback.LinkInputSig(trilist.StringInput[joinMap.BaseJoinMap.Name.JoinNumber]);
+            IsOnlineFeedback.LinkInputSig(onlineSig);
 
-
-            if ((int)joinMap.BaseJoinMap.OutletName.JoinNumber - (int)joinStart > 0)
+            NameFeedback.LinkInputSig(trilist.StringInput[joinMap.Name.JoinNumber]);
+ 
+            if ((int)joinMap.OutletName.JoinNumber - (int)joinStart > 0)
             {
+                var index = 0;
                 foreach (var o in PduOutlets.Select(outlet => outlet.Value).OfType<WattboxOutlet>())
                 {
-                    o.LinkOutlet(trilist, joinMap);
+                    var i = index;
+                    o.LinkOutlet(trilist, joinMap, i);
+                    index++;
                 }
             }
 
@@ -357,18 +360,20 @@ namespace Pdu_Wattbox_Epi
         {
             try
             {
-                string currentHostname = _dc.Properties["control"]["tcpSshProperties"]["address"].ToString();
+                var currentHostname = _dc.Properties["control"]["tcpSshProperties"]["address"].ToString();
 
-                if (hostname.Length > 2)
+                if (hostname.Length <= 2)
                 {
-                    if (currentHostname != hostname)
-                    {
-                        //UpdateHostname(hostname);
-
-                        _dc.Properties["control"]["tcpSshProperties"]["address"] = hostname;
-                        CustomSetConfig(_dc);
-                    }
+                    return;
                 }
+                if (currentHostname == hostname)
+                {
+                    return;
+                }
+                //UpdateHostname(hostname);
+
+                _dc.Properties["control"]["tcpSshProperties"]["address"] = hostname;
+                CustomSetConfig(_dc);
             }
             catch (Exception e)
             {
@@ -379,15 +384,13 @@ namespace Pdu_Wattbox_Epi
 
         #region Overrides of Device
 
-        public override bool CustomActivate()
+        public override void Initialize()
         {
             Comms.Connect();
             Comms.Start();
-            return base.CustomActivate();
         }
 
         #endregion
-
 
         private string GetIpAddress(string hostname)
         {
@@ -429,14 +432,7 @@ namespace Pdu_Wattbox_Epi
 
         }
 
-        #region ICommunicationMonitor Members
-
-
-        #endregion
-
         #region IDeviceInfoProvider Members
-
-
 
         public event DeviceInfoChangeHandler DeviceInfoChanged;
 
@@ -472,12 +468,6 @@ namespace Pdu_Wattbox_Epi
                 return false;
             }
         }
-
-
-        #endregion
-
-        #region ICommunicationMonitor Members
-
 
         #endregion
     }

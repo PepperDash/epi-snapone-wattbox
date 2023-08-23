@@ -18,7 +18,7 @@ namespace Wattbox.Lib
 
     public delegate void SerialUpdate(string serial);
 
-    public interface IWattboxCommunications : IKeyed, IBasicCommunication
+    public interface IWattboxCommunications : IBasicCommunication
     {
         bool IsLoggedIn { get; }
         bool IsOnlineWattbox { get;  }
@@ -33,8 +33,6 @@ namespace Wattbox.Lib
 
         void GetStatus();
         void SetOutlet(int index, int action);
-
-        void Connect();
     }
 
 }

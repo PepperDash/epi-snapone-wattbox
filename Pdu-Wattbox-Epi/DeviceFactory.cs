@@ -32,11 +32,6 @@ namespace Pdu_Wattbox_Epi
 
             var method = controlProperties.Method;
 
-            var methodString = method.ToString();
-
-            var newKey = String.Format("{0}-{1}", dc.Key, methodString);
-            var newName = String.Format("{0}-{1}", dc.Name, methodString);
-
             if (method == eControlMethod.Http || method == eControlMethod.Https)
             {
                 Debug.Console(1, "Creating Wattbox using HTTP Comms");
@@ -57,7 +52,7 @@ namespace Pdu_Wattbox_Epi
             }
             var control = CommFactory.GetControlPropertiesConfig(dc);
 
-            var comms = new WattboxCommunicationMonitor(internalComms, 90000, 180000, internalComms, 0, control.Method);
+            var comms = new WattboxCommunicationMonitor(internalComms, 90000, 180000, internalComms, 5000, control.Method);
 
             return new WattboxController(dc.Key, dc.Name, comms, dc);
         }

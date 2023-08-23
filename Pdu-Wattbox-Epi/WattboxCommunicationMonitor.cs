@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
@@ -35,15 +32,11 @@ namespace Pdu_Wattbox_Epi
             _pollTime = pollTime;
             _controlMethod = controlMethod;
 
-            //DeviceManager.AddDevice(this);
-
             UpdateFirmwareVersion = Communications.UpdateFirmwareVersion;
             UpdateSerial = Communications.UpdateSerial;
             UpdateHostname = Communications.UpdateHostname;
 
             Communications.TextReceived += Communications_TextReceived;
-
-            
         }
 
         void Communications_TextReceived(object sender, GenericCommMethodReceiveTextArgs e)
@@ -56,8 +49,6 @@ namespace Pdu_Wattbox_Epi
             if (e == null) return;
             handler(this, e);
         }
-
-
 
         public IWattboxCommunications Communications;
 
@@ -182,7 +173,10 @@ namespace Pdu_Wattbox_Epi
             Communications.Disconnect();
         }
 
-        public bool IsConnected { get; private set; }
+        public bool IsConnected
+        {
+            get { return Communications.IsConnected; }
+        }
 
         public event EventHandler<GenericCommMethodReceiveTextArgs> TextReceived;
 

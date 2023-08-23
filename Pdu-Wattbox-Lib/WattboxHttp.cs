@@ -7,7 +7,7 @@ using PepperDash.Core;
 
 namespace Wattbox.Lib
 {
-    public class WattboxHttp : IWattboxCommunications, IBasicCommunication
+    public class WattboxHttp : IWattboxCommunications
     {
         private readonly string _authorization;
         private readonly HttpClient _client = new HttpClient();
@@ -19,18 +19,14 @@ namespace Wattbox.Lib
 
         public WattboxHttp(string key, string name, string authType, TcpSshPropertiesConfig tcpProperties)
         {
-            //Props = JsonConvert.DeserializeObject<Properties>(dc.Properties.ToString());
             Key = key;
             Name = name;
-
-            //Debug.Console(1, this, "Made it to constructor for Wattbox HTTP");
 
             BaseUrl = tcpProperties.Address;
             _port = tcpProperties.Port;
             _username = tcpProperties.Username;
             _password = tcpProperties.Password;
             _authorization = authType;
-
         }
 
         public string Name { get; set; }
@@ -95,14 +91,8 @@ namespace Wattbox.Lib
                 var encodedAuth = Convert.ToBase64String(plainText);
 
                 _client.KeepAlive = false;
-                if (_port == 0)
-                {
-                    _client.Port = 80;
-                }
-                else if (_port >= 1 || _port <= 65535)
-                {
-                    _client.Port = _port;
-                }
+
+                _client.Port = _port > 0 || _port < 65535 ? _port : 80;
 
                 var request = new HttpClientRequest();
 
@@ -121,65 +111,53 @@ namespace Wattbox.Lib
                 //Debug.Console(2, this, "Sending request to {0}", request.Url);
                 var response = _client.Dispatch(request);
 
-                if (response != null)
-                {
-                    var responseCode = response.Code;
-
-                    Debug.Console(2, "{0}:{1}", url, responseCode);
-
-                    IsOnlineWattbox = (responseCode == 200 && responseCode != 401);
-
-                    var handler = TextReceived;
-                    if (handler != null)
-                    {
-                        handler(this, new GenericCommMethodReceiveTextArgs());
-                    }
-
-
-                    if (!String.IsNullOrEmpty(response.ContentString))
-                    {
-                        //Debug.Console(2, this, "Header Content Type : \n{0}", response.Header.ContentType);
-
-                        //Debug.Console(2, this, "Response : \n{0}", response.ContentString);
-
-                        if (response.Header.ContentType.Contains("text/xml"))
-                        {
-                            //Debug.Console(2, this, "Parsing");
-                            ParseResponse(response.ContentString);
-                        }
-                        else SetOfflineFail();
-                    }
-                    else
-                    {
-                        IsOnlineWattbox = false;
-                        Debug.Console(2, this, "Response ContentString is null or empty");
-                    }
-
-                }
-                else
+                if (response == null)
                 {
                     IsOnlineWattbox = false;
+                    return;
                 }
+                
+                var responseCode = response.Code;
+
+                Debug.Console(2, "{0}:{1}", url, responseCode);
+
+                //Any 2XX or 3XX response code is a valid HTTP response code that indicates no error
+                IsOnlineWattbox = (responseCode >= 200 && responseCode < 400);
+
+                var handler = TextReceived;
+                if (handler != null)
+                {
+                    handler(this, new GenericCommMethodReceiveTextArgs());
+                }
+
+                if(string.IsNullOrEmpty(response.ContentString))
+                {
+                    IsOnlineWattbox = false;
+                    Debug.Console(2, this, "Response ContentString is null or empty");
+                    return;
+                }
+                
+                if (response.Header.ContentType.Contains("text/xml"))
+                {
+                    //Debug.Console(2, this, "Parsing");
+                    ParseResponse(response.ContentString);
+                    return;
+                }
+                SetOfflineFail();
             }
             catch (Exception e)
             {
                 Debug.Console(2, this, "Exception in HTTP Request : {0}", e.Message);
-                if (e.Message.ToLower().Contains("unauthorized") || e.Message.ToLower().Contains("401"))
-
-                    IsOnlineWattbox = false;
-
                 Debug.Console(2, this, "Stack Trace: {0}", e.StackTrace);
+                if (e.Message.ToLower().Contains("unauthorized") || e.Message.ToLower().Contains("401"))
+                    IsOnlineWattbox = false;
             }
             finally
             {
-
-                //Debug.Console(0, this, "Reached finally and IsOnline =  {0}", IsOnlineWattbox);
-
                 var handler = UpdateOnlineStatus;
 
                 if (handler != null)
                 {
-
                     //Debug.Console(0, this, "UpdateOnlineStatus Handler is Not Null and IsOnline =  {0}", IsOnlineWattbox);
                     handler(IsOnlineWattbox);
                 }
@@ -190,7 +168,6 @@ namespace Wattbox.Lib
         {
             IsOnlineWattbox = false;
             _failtracker++;
-
         }
 
         public void ParseResponse(string data)
@@ -228,12 +205,10 @@ namespace Wattbox.Lib
                 var namesHandler = UpdateOutletName;
 
                 if (namesHandler != null) namesHandler(outletNames);
-                
+                return;
             }
-            else
-            {
-                GetStatus();
-            }
+
+            GetStatus();
         }
 
         #region IBasicCommunication Members
