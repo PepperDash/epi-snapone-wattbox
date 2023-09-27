@@ -474,8 +474,8 @@ namespace Pdu_Wattbox_Epi
 
     public enum EWattboxOutletSet
     {
-        PowerOff  = 0,
-        PowerOn,
-        PowerCycle
+        PowerOff    = 0,
+        PowerOn     = 1,
+        PowerCycle  = 3
     }
 }
