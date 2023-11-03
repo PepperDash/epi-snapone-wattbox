@@ -241,7 +241,7 @@ namespace Pdu_Wattbox_Epi
             catch (Exception ex)
             {
                 Debug.Console(0, this, "Exception updating online status: {0}", ex.Message);
-                Debug.Console(1, this, "Exception updating online status: {1}", ex.StackTrace);
+                Debug.Console(1, this, "Exception updating online status: {0}", ex.StackTrace);
             }     
         }
 
