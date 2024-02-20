@@ -10,6 +10,7 @@ namespace Wattbox.Lib
     {
         private const string DelimiterOut = "\x0A";
         private const string DelimiterIn = "\x0D\x0A";
+        private const string DelimiterTcp = "\x0A";
         private const string DelimiterUsername = ": ";
         public readonly IBasicCommunication Communication;
         private readonly TcpSshPropertiesConfig _config;
@@ -242,7 +243,13 @@ namespace Wattbox.Lib
             _portGather.LineReceived -= PortGather_LineReceived;
 
             //logging in changes the delmiter we're looking for...
-            _portGather = new CommunicationGather(Communication, DelimiterIn);
+            if (Communication is GenericSshClient)
+            {
+                _portGather = new CommunicationGather(Communication, DelimiterIn);
+            }
+            else { 
+                _portGather = new CommunicationGather(Communication, DelimiterTcp); 
+            }
             _portGather.LineReceived += PortGather_LineReceived;
 
             Debug.Console(2, this, "sending password {0}", _config.Password);
