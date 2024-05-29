@@ -57,7 +57,7 @@ namespace Wattbox.Lib
             var newUrl = String.Format("http://{0}/wattbox_info.xml", BaseUrl);
             var newDir = String.Format("/wattbox_info.xml");
 
-            //Debug.Console(2, this, "Sending status request to {0}", newUrl);
+            Debug.Console(1, this, "Sending status request to {0}", newUrl);
             SubmitRequest(newUrl, newDir, RequestType.Get);
         }
 
@@ -119,7 +119,7 @@ namespace Wattbox.Lib
                 
                 var responseCode = response.Code;
 
-                Debug.Console(2, "{0}:{1}", url, responseCode);
+                Debug.Console(1, "{0}:{1}", url, responseCode);
 
                 //Any 2XX or 3XX response code is a valid HTTP response code that indicates no error
                 IsOnlineWattbox = (responseCode >= 200 && responseCode < 400);
@@ -133,7 +133,7 @@ namespace Wattbox.Lib
                 if(string.IsNullOrEmpty(response.ContentString))
                 {
                     IsOnlineWattbox = false;
-                    Debug.Console(2, this, "Response ContentString is null or empty");
+                    Debug.Console(1, this, "Response ContentString is null or empty");
                     return;
                 }
                 
