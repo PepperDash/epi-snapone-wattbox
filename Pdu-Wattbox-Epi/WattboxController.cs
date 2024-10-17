@@ -323,16 +323,14 @@ namespace Pdu_Wattbox_Epi
 
             NameFeedback.LinkInputSig(trilist.StringInput[joinMap.Name.JoinNumber]);
  
-            if ((int)joinMap.OutletName.JoinNumber - (int)joinStart > 0)
+
+            var index = 0;
+            foreach (var o in PduOutlets.Select(outlet => outlet.Value).OfType<WattboxOutlet>())
             {
-                var index = 0;
-                foreach (var o in PduOutlets.Select(outlet => outlet.Value).OfType<WattboxOutlet>())
-                {
-                    var i = index;
-                    o.LinkOutlet(trilist, joinMap, i);
-                    index++;
-                }
-            }
+                var i = index;
+                o.LinkOutlet(trilist, joinMap, i);
+                index += 4;
+            }            
 
             trilist.OnlineStatusChange += (d, args) =>
             {
