@@ -132,14 +132,13 @@ namespace Wattbox.Lib
 
                 if(string.IsNullOrEmpty(response.ContentString))
                 {
-                    IsOnlineWattbox = false;
-                    Debug.Console(1, this, "Response ContentString is null or empty");
                     return;
                 }
                 
                 if (response.Header.ContentType.Contains("text/xml"))
                 {
                     //Debug.Console(2, this, "Parsing");
+                    IsOnlineWattbox = true;
                     ParseResponse(response.ContentString);
                     return;
                 }
