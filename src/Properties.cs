@@ -13,7 +13,7 @@ namespace Pdu_Wattbox_Epi {
         [JsonProperty("parseOutletNames")]
         public bool ParseOutletNames { get; set; }
         [JsonProperty("outlets")]
-        public JObject Outlets { get; set; }
+        public JToken Outlets { get; set; }
 
         public Properties()
         {

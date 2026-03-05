@@ -32,6 +32,6 @@
 		<None Remove="SnaponeWattboxEpi.projectinfo" />
 	</ItemGroup>
 	<ItemGroup>
-	  <PackageReference Include="PepperDashEssentials" Version="2.27.1" />
+	  <PackageReference Include="PepperDashEssentials" Version="2.27.0" />
 	</ItemGroup>
 </Project>
