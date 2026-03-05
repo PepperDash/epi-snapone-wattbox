@@ -2,13 +2,12 @@
 using Crestron.SimplSharpPro.DeviceSupport;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
-using PepperDash_Essentials_Core.Devices;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
 
 namespace Pdu_Wattbox_Epi
 {
-    public class WattboxOutlet : IHasPowerCycle
+    public class WattboxOutlet : PepperDash.Essentials.Core.Devices.IHasPowerCycle
     {
         public string Name { get; private set; }
         public string Key { get; private set; }
@@ -37,9 +36,9 @@ namespace Pdu_Wattbox_Epi
             Name = name;
             //this doesn't matter!!!!
             PowerCycleTimeMs = 12345;
-            PowerIsOnFeedback = new BoolFeedback(() => PowerStatus);
-            EnabledFeedback = new BoolFeedback(() => Enabled);
-            NameFeedback = new StringFeedback(() => Name);
+            PowerIsOnFeedback = new BoolFeedback(string.Format("{0}-powerOn", Key), () => PowerStatus);
+            EnabledFeedback = new BoolFeedback(string.Format("{0}-enabled", Key), () => Enabled);
+            NameFeedback = new StringFeedback(string.Format("{0}-name", Key), () => Name);
 
             Feedbacks = new FeedbackCollection<Feedback>
             {

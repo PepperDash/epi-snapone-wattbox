@@ -2,7 +2,6 @@
 using System.Linq;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
-using PepperDash_Essentials_Core.Devices;
 
 namespace Pdu_Wattbox_Epi
 {
@@ -50,7 +49,7 @@ namespace Pdu_Wattbox_Epi
 
         }
 
-        public WattboxJoinmapDynamic(uint joinStart, IEnumerable<KeyValuePair<int, IHasPowerCycle>> pduOutlets)
+        public WattboxJoinmapDynamic(uint joinStart, IEnumerable<KeyValuePair<int, PepperDash.Essentials.Core.Devices.IHasPowerCycle>> pduOutlets)
             : base(joinStart, typeof (WattboxJoinmapDynamic))
         {
             BaseJoinMap = new PduJoinMapBase(joinStart);

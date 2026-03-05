@@ -13,20 +13,20 @@ using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.DeviceInfo;
 using PepperDash.Essentials.Core.Devices;
-using PepperDash_Essentials_Core.Devices;
+using Serilog.Events;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace Pdu_Wattbox_Epi
 {
-    public class WattboxController : ReconfigurableDevice, IHasControlledPowerOutlets, IDeviceInfoProvider, ICommunicationMonitor, IBridgeAdvanced
+    public class WattboxController : ReconfigurableDevice, PepperDash.Essentials.Core.Devices.IHasControlledPowerOutlets, IDeviceInfoProvider, ICommunicationMonitor, IBridgeAdvanced
     {
         private const long PollTime = 45000;
         //private readonly IWattboxCommunications _comms;
         private readonly Properties _props;
         public FeedbackCollection<Feedback> Feedbacks;
-        public ReadOnlyDictionary<int, IHasPowerCycle> PduOutlets { get; set; }
+        public ReadOnlyDictionary<int, PepperDash.Essentials.Core.Devices.IHasPowerCycle> PduOutlets { get; set; }
 
-        private  Dictionary<int, IHasPowerCycle> TempDict { get; set; }
+        private  Dictionary<int, PepperDash.Essentials.Core.Devices.IHasPowerCycle> TempDict { get; set; }
         public readonly WattboxCommunicationMonitor Comms;
 
         public DeviceInfo DeviceInfo { get; private set; }
@@ -69,11 +69,11 @@ namespace Pdu_Wattbox_Epi
 
             _dc = dc;
 
-            TempDict = new Dictionary<int, IHasPowerCycle>();
+            TempDict = new Dictionary<int, PepperDash.Essentials.Core.Devices.IHasPowerCycle>();
 
             if (dc.Properties == null)
             {
-                Debug.Console(0, this, "Malformed Json");
+                Debug.LogMessage(LogEventLevel.Warning, this, "Malformed Json");
                 return;
             }
 
@@ -84,7 +84,7 @@ namespace Pdu_Wattbox_Epi
             var outletsToken = dc.Properties.SelectToken("outlets");
             if (outletsToken == null)
             {
-                Debug.Console(0, this, "OutletsToken is null");
+                Debug.LogMessage(LogEventLevel.Warning, this, "OutletsToken is null");
                 return;
             }
 
@@ -92,7 +92,7 @@ namespace Pdu_Wattbox_Epi
             var outletsDict = outletsToken as JObject;
             if (outletsArray != null && outletsArray.Count > 1)
             {
-                Debug.Console(0, this, "Found an Array");
+                Debug.LogMessage(LogEventLevel.Debug, this, "Found an Array");
                 outlets = (outletsArray).Select(x => new Outlet
                 {
                     Key = (string)x["key"],
@@ -104,13 +104,13 @@ namespace Pdu_Wattbox_Epi
             }
             else if (outletsDict != null)
             {
-                Debug.Console(0, this, "Found an Object");
+                Debug.LogMessage(LogEventLevel.Debug, this, "Found an Object");
 
                 outlets = ListConvert(outletsToken.ToObject<Dictionary<string, OutletDict>>());
             }
             Outlets = outlets;
 
-            Debug.Console(2, this, "There are {0} outlets for {1}", Outlets.Count(), Name);
+            Debug.LogMessage(LogEventLevel.Verbose, this, "There are {0} outlets for {1}", Outlets.Count(), Name);
             foreach (var item in Outlets)
             {
                 var i = item;
@@ -118,7 +118,7 @@ namespace Pdu_Wattbox_Epi
                 TempDict.Add(i.OutletNumber, outlet);
                 DeviceManager.AddDevice(outlet);
             }
-            PduOutlets = new ReadOnlyDictionary<int, IHasPowerCycle>(TempDict);
+            PduOutlets = new ReadOnlyDictionary<int, PepperDash.Essentials.Core.Devices.IHasPowerCycle>(TempDict);
             OutletCount = PduOutlets.Count;
 
             CrestronEnvironment.ProgramStatusEventHandler += type =>
@@ -134,10 +134,10 @@ namespace Pdu_Wattbox_Epi
 
             };
 
-            NameFeedback = new StringFeedback(() => Name);
-            IsOnlineFeedback = new BoolFeedback(() => Comms.IsOnlineWattbox);
-            OutletCountFeedback = new IntFeedback(() => OutletCount);
-            IpChangeFeedback = new BoolFeedback(() => _ipChanged);
+            NameFeedback = new StringFeedback(string.Format("{0}-name", Key), () => Name);
+            IsOnlineFeedback = new BoolFeedback(string.Format("{0}-online", Key), () => Comms.IsOnlineWattbox);
+            OutletCountFeedback = new IntFeedback(string.Format("{0}-outletCount", Key), () => OutletCount);
+            IpChangeFeedback = new BoolFeedback(string.Format("{0}-ipChanged", Key), () => _ipChanged);
 
             Feedbacks = new FeedbackCollection<Feedback>
             {
@@ -167,7 +167,7 @@ namespace Pdu_Wattbox_Epi
             }
             catch (Exception ex)
             {
-                Debug.Console(0, this, "Unable to resolve host data : {0}", ex.Message);
+                Debug.LogMessage(LogEventLevel.Warning, this, "Unable to resolve host data : {0}", ex.Message);
             }
         }
 
@@ -198,7 +198,7 @@ namespace Pdu_Wattbox_Epi
             var configured = Outlets.Count;
 
             if (configured != actual)
-                Debug.Console(0, this, "The number of configured outlets ({0}) does not match the number of outlets on the device ({1}).", configured, actual);
+                Debug.LogMessage(LogEventLevel.Warning, this, "The number of configured outlets ({0}) does not match the number of outlets on the device ({1}).", configured, actual);
 
             for (var i = 0; i < actual; i++)
             {
@@ -220,7 +220,7 @@ namespace Pdu_Wattbox_Epi
             var configured = Outlets.Count;
 
             if (configured != actual)
-                Debug.Console(0, this, "The number of configured outlets ({0}) does not match the number of outlets on the device ({1}).", configured, actual);
+                Debug.LogMessage(LogEventLevel.Warning, this, "The number of configured outlets ({0}) does not match the number of outlets on the device ({1}).", configured, actual);
 
             for (var i = 0; i < actual; i++)
             {
@@ -240,8 +240,8 @@ namespace Pdu_Wattbox_Epi
             }
             catch (Exception ex)
             {
-                Debug.Console(0, this, "Exception updating online status: {0}", ex.Message);
-                Debug.Console(1, this, "Exception updating online status: {1}", ex.StackTrace);
+                Debug.LogMessage(LogEventLevel.Error, this, "Exception updating online status: {0}", ex.Message);
+                Debug.LogMessage(LogEventLevel.Verbose, this, "Exception updating online status: {0}", ex.StackTrace);
             }     
         }
 
@@ -313,9 +313,9 @@ namespace Pdu_Wattbox_Epi
                 };
             }
 
-            Debug.Console(1, this, "Linking to Trilist '{0}'", trilist.ID.ToString("X"));
+            Debug.LogMessage(LogEventLevel.Debug, this, "Linking to Trilist '{0}'", trilist.ID.ToString("X"));
 
-            Debug.Console(2, this, "There are {0} Outlets", Outlets.Count());
+            Debug.LogMessage(LogEventLevel.Verbose, this, "There are {0} Outlets", Outlets.Count());
 
             var onlineSig = trilist.BooleanInput[joinMap.Online.JoinNumber];
 
@@ -348,7 +348,7 @@ namespace Pdu_Wattbox_Epi
         protected override void CustomSetConfig(DeviceConfig config)
         {
             ConfigWriter.UpdateDeviceConfig(config);
-            Debug.Console(0, this, "IP address changed to {0}. Restart Essentials to take effect.", _dc.Properties["control"]["tcpSshProperties"]["address"].ToString());
+            Debug.LogMessage(LogEventLevel.Information, this, "IP address changed to {0}. Restart Essentials to take effect.", _dc.Properties["control"]["tcpSshProperties"]["address"].ToString());
 
             _ipChanged = true;
             IpChangeFeedback.FireUpdate();
@@ -376,7 +376,7 @@ namespace Pdu_Wattbox_Epi
             catch (Exception e)
             {
                 if (Debug.Level == 2)
-                    Debug.Console(2, this, "Error SetIpAddress: '{0}'", e);
+                    Debug.LogMessage(LogEventLevel.Verbose, this, "Error SetIpAddress: '{0}'", e);
             }
         }
 
@@ -461,7 +461,7 @@ namespace Pdu_Wattbox_Epi
                 var ex = e as FormatException;
                 if (ex != null)
                 {
-                    Debug.Console(2, this, "{0} is not a valid IP Address", data);
+                    Debug.LogMessage(LogEventLevel.Verbose, this, "{0} is not a valid IP Address", data);
                 }
                 return false;
             }
