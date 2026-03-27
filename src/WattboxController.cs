@@ -295,23 +295,17 @@ namespace Pdu_Wattbox_Epi
                 bridge.AddJoinMap(Key, joinMap);
             }
 
-            JoinDataComplete setIpJoinData;
-            if (joinMap.Joins.TryGetValue("SetIpAddress", out setIpJoinData))
-            {
-                trilist.SetStringSigAction(setIpJoinData.JoinNumber, SetIpAddress);
-            }
+            // Adding SetIpAddress logic as join is not present in PduJoinMapBase
+            var setIpJoinNumber = joinStart + 1;
+            trilist.SetStringSigAction(setIpJoinNumber, SetIpAddress);
 
-            JoinDataComplete ipSetFbJoinData;
-            if (joinMap.Joins.TryGetValue("IpAddressSetFeedback", out ipSetFbJoinData))
+            IpChangeFeedback.OutputChange += (o, a) =>
             {
-                IpChangeFeedback.OutputChange += (o, a) =>
-                {
-                    if (!a.BoolValue) return;
-                    trilist.PulseBool(ipSetFbJoinData.JoinNumber, 1000);
-                    _ipChanged = false;
-                    IpChangeFeedback.FireUpdate();
-                };
-            }
+                if (!a.BoolValue) return;
+                trilist.PulseBool(setIpJoinNumber, 1000);
+                _ipChanged = false;
+                IpChangeFeedback.FireUpdate();
+            };
 
             Debug.LogMessage(LogEventLevel.Debug, this, "Linking to Trilist '{0}'", trilist.ID.ToString("X"));
 
