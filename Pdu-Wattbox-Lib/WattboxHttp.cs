@@ -199,7 +199,7 @@ namespace Wattbox.Lib
 
                 var outletNamesResult = xml.Element("outlet_name").Value;
 
-                var outletNames = outletNamesResult.Split(',').ToList();
+                var outletNames = ParseOutletNamesByCommaSpace(outletNamesResult, outletStatus.Count);
 
                 var namesHandler = UpdateOutletName;
 
@@ -208,6 +208,27 @@ namespace Wattbox.Lib
             }
 
             GetStatus();
+        }
+
+        private static System.Collections.Generic.List<string> ParseOutletNamesByCommaSpace(string outletNamesRaw, int expectedCount)
+        {
+            var names = outletNamesRaw.Split(',').ToList();
+
+            if (expectedCount <= 0 || names.Count <= expectedCount)
+                return names.Select(s => s.Trim()).ToList();
+
+            // Merge only fragments that look like a continuation after ", ".
+            for (var i = 1; i < names.Count && names.Count > expectedCount; i++)
+            {
+                if (!names[i].StartsWith(" "))
+                    continue;
+
+                names[i - 1] = string.Format("{0},{1}", names[i - 1], names[i]);
+                names.RemoveAt(i);
+                i--;
+            }
+
+            return names.Select(s => s.Trim()).ToList();
         }
 
         #region IBasicCommunication Members
