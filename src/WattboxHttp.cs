@@ -17,7 +17,7 @@ namespace Wattbox.Lib
         private readonly int _port;
         private readonly HttpClientRequest _request = new HttpClientRequest();
         private readonly string _username;
-        private int _failtracker;
+        private bool _authFailed;
 
         public WattboxHttp(string key, string name, string authType, TcpSshPropertiesConfig tcpProperties)
         {
@@ -82,18 +82,13 @@ namespace Wattbox.Lib
         {
             try
             {
-                if (_failtracker >= 3)
-                {
-                    Debug.LogMessage(LogEventLevel.Warning, this, "Authentication failure - please check auth and restart essentials");
-                    return;
-                }
-
                 _client.KeepAlive = false;
                 _client.Port = _port > 0 && _port < 65535 ? _port : 80;
 
                 // First attempt - uses the configured scheme (Basic by default).
                 string error;
                 var response = TryDispatch(url, requestType, null, out error);
+                LogAuthDiagnostics("initial", response, error);
 
                 // WB-800-IPVM / OvrC firmware requires HTTP Digest auth: it rejects Basic with a
                 // 401 + 'WWW-Authenticate: Digest ...' challenge. Crestron's HttpClient surfaces that
@@ -105,16 +100,20 @@ namespace Wattbox.Lib
                     var digestHeader = BuildDigestHeader(challenge, MethodString(requestType), dir);
                     if (!String.IsNullOrEmpty(digestHeader))
                     {
-                        Debug.LogMessage(LogEventLevel.Debug, this, "Retrying request with HTTP Digest auth");
+                        Debug.LogMessage(LogEventLevel.Debug, this, "Retrying request with HTTP Digest auth: {0}", digestHeader);
                         response = TryDispatch(url, requestType, digestHeader, out error);
+                        LogAuthDiagnostics("digest-retry", response, error);
                     }
                 }
 
+                // A 401 that survived the (optional) digest retry is a genuine auth failure. A null
+                // response without a 401 is an offline/transport failure - do NOT call it an auth error.
                 if (response == null)
                 {
-                    if (!String.IsNullOrEmpty(error))
-                        Debug.LogMessage(LogEventLevel.Verbose, this, "HTTP Request failed: {0}", error);
-                    SetOfflineFail();
+                    if (!String.IsNullOrEmpty(error) && error.IndexOf("401", StringComparison.OrdinalIgnoreCase) >= 0)
+                        ReportAuthFailure();
+                    else
+                        ReportOffline(error);
                     return;
                 }
 
@@ -122,10 +121,19 @@ namespace Wattbox.Lib
 
                 Debug.LogMessage(LogEventLevel.Debug, "{0}:{1}", url, responseCode);
 
+                if (responseCode == 401)
+                {
+                    ReportAuthFailure();
+                    return;
+                }
+
                 //Any 2XX or 3XX response code is a valid HTTP response code that indicates no error
                 IsOnlineWattbox = (responseCode >= 200 && responseCode < 400);
                 if (IsOnlineWattbox)
-                    _failtracker = 0;
+                {
+                    // Recovered - clear the auth-failure latch so the warning can fire again later.
+                    _authFailed = false;
+                }
 
                 var handler = TextReceived;
                 if (handler != null)
@@ -137,7 +145,7 @@ namespace Wattbox.Lib
                 {
                     return;
                 }
-                
+
                 if (response.Header.ContentType.Contains("text/xml"))
                 {
                     //Debug.Console(2, this, "Parsing");
@@ -147,7 +155,7 @@ namespace Wattbox.Lib
                 }
 
                 if (!IsOnlineWattbox)
-                    SetOfflineFail();
+                    ReportOffline(null);
             }
             catch (Exception e)
             {
@@ -309,10 +317,44 @@ namespace Wattbox.Lib
             }
         }
 
-        private void SetOfflineFail()
+        // A real authentication failure: a 401 that the device returned even after we offered Digest
+        // (or that we could not answer). Latched so the warning logs once per failure, not every poll.
+        private void ReportAuthFailure()
         {
             IsOnlineWattbox = false;
-            _failtracker++;
+            if (_authFailed)
+                return;
+
+            _authFailed = true;
+            Debug.LogMessage(LogEventLevel.Warning, this,
+                "Authentication failure (HTTP 401) - check username/password and that the device's auth scheme (Basic/Digest) is supported");
+        }
+
+        // A transport/offline failure (timeout, refused, DNS, etc.) - NOT an auth problem. Keeps
+        // polling so the device self-heals; logged quietly to avoid spam at the poll rate.
+        private void ReportOffline(string error)
+        {
+            IsOnlineWattbox = false;
+            if (!String.IsNullOrEmpty(error))
+                Debug.LogMessage(LogEventLevel.Verbose, this, "HTTP request failed (offline): {0}", error);
+        }
+
+        // Surfaces exactly what each attempt returned so auth issues are diagnosable on hardware:
+        // the response code + WWW-Authenticate header when a response came back, or the raw
+        // exception message when Crestron's HttpClient threw (e.g. on a 401).
+        private void LogAuthDiagnostics(string phase, HttpClientResponse response, string error)
+        {
+            if (response != null)
+            {
+                var www = GetAuthenticateHeader(response);
+                Debug.LogMessage(LogEventLevel.Debug, this, "[{0}] code={1} WWW-Authenticate={2}",
+                    phase, response.Code, String.IsNullOrEmpty(www) ? "(none)" : www);
+            }
+            else
+            {
+                Debug.LogMessage(LogEventLevel.Debug, this, "[{0}] no response object; error={1}",
+                    phase, String.IsNullOrEmpty(error) ? "(none)" : error);
+            }
         }
 
         public void ParseResponse(string data)
