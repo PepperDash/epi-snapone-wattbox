@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Crestron.SimplSharp;
 using PepperDash.Core;
 using Serilog.Events;
@@ -170,13 +171,19 @@ namespace Wattbox.Lib
             {
                 var outletNameString = data.Substring(12);
                 Debug.LogMessage(LogEventLevel.Verbose, this, "name substring: {0}", outletNameString);
-                var outletNameList = outletNameString.Split(',').ToList();
 
-                for (int i = 0; i < outletNameList.Count; i++)
-                {
-                    var tempName = outletNameList[i];
-                    outletNameList[i] = tempName.Substring(1, tempName.Length - 2);
-                }
+                // Names are wrapped in braces: {Name1},{Name2},...  A name may itself contain a
+                // comma (e.g. "{RDL Devices - PS4 - UA1, BA1}"), so extract by braces rather than
+                // splitting on ',' - a naive split miscounts outlets (e.g. 13 instead of 12) and
+                // shifts every name after the one that contains the comma.
+                var outletNameList = Regex.Matches(outletNameString, @"\{([^}]*)\}")
+                    .Cast<Match>()
+                    .Select(m => m.Groups[1].Value)
+                    .ToList();
+
+                // Fallback for any firmware that doesn't wrap names in braces.
+                if (outletNameList.Count == 0)
+                    outletNameList = outletNameString.Split(',').Select(s => s.Trim('{', '}')).ToList();
 
                 var handler = UpdateOutletName;
                 if (handler != null) handler(outletNameList);
