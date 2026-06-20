@@ -15,7 +15,7 @@ namespace Wattbox.Lib
         private readonly int _port;
         private readonly HttpClientRequest _request = new HttpClientRequest();
         private readonly string _username;
-        private int _failtracker;
+        private bool _authFailed;
 
         public WattboxHttp(string key, string name, string authType, TcpSshPropertiesConfig tcpProperties)
         {
@@ -55,18 +55,16 @@ namespace Wattbox.Lib
         public void GetStatus()
         {
             var newUrl = String.Format("http://{0}/wattbox_info.xml", BaseUrl);
-            var newDir = String.Format("/wattbox_info.xml");
 
             Debug.Console(1, this, "Sending status request to {0}", newUrl);
-            SubmitRequest(newUrl, newDir, RequestType.Get);
+            SubmitRequest(newUrl, RequestType.Get);
         }
 
         public void SetOutlet(int index, int action)
         {
             var newUrl = String.Format("http://{0}/control.cgi?outlet={1}&command={2}", BaseUrl, index, action);
-            var newDir = String.Format("/control.cgi?outlet={0}&command={1}", index, action);
             //Debug.Console(2, Debug.ErrorLogLevel.Notice, "Url: {0}", newUrl);
-            SubmitRequest(newUrl, newDir, RequestType.Get);
+            SubmitRequest(newUrl, RequestType.Get);
         }
 
         public void Connect()
@@ -76,53 +74,46 @@ namespace Wattbox.Lib
 
         #endregion
 
-        public void SubmitRequest(string url, string dir, RequestType requestType)
+        public void SubmitRequest(string url, RequestType requestType)
         {
             try
             {
-                if (_failtracker >= 3)
-                {
-                    Debug.Console(0, this, Debug.ErrorLogLevel.Warning, "Authentication failure - please check auth and restart essentials");
-                    return;
-                }
-
-                var plainText = Encoding.UTF8.GetBytes(String.Format("{0}:{1}", _username, _password));
-
-                var encodedAuth = Convert.ToBase64String(plainText);
-
                 _client.KeepAlive = false;
+                _client.Port = _port > 0 && _port < 65535 ? _port : 80;
 
-                _client.Port = _port > 0 || _port < 65535 ? _port : 80;
+                // Uses the configured scheme (Basic by default).
+                string error;
+                var response = TryDispatch(url, requestType, out error);
+                LogAuthDiagnostics("initial", response, error);
 
-                var request = new HttpClientRequest();
-
-                if (!string.IsNullOrEmpty(_authorization))
-                {
-                    request.Header.SetHeaderValue("Authorization",
-                        String.Format("{0} {1}", _authorization, encodedAuth));
-                }
-                request.Header.SetHeaderValue("User-Agent", "APP");
-                request.KeepAlive = true;
-                request.Header.SetHeaderValue("Keep-Alive", "300");
-
-                request.Url.Parse(url);
-                request.RequestType = requestType;
-
-                //Debug.Console(2, this, "Sending request to {0}", request.Url);
-                var response = _client.Dispatch(request);
-
+                // A 401 is a genuine auth failure. A null response without a 401 is an
+                // offline/transport failure - do NOT call it an auth error.
                 if (response == null)
                 {
-                    IsOnlineWattbox = false;
+                    if (!String.IsNullOrEmpty(error) && error.IndexOf("401", StringComparison.OrdinalIgnoreCase) >= 0)
+                        ReportAuthFailure();
+                    else
+                        ReportOffline(error);
                     return;
                 }
-                
+
                 var responseCode = response.Code;
 
                 Debug.Console(1, "{0}:{1}", url, responseCode);
 
+                if (responseCode == 401)
+                {
+                    ReportAuthFailure();
+                    return;
+                }
+
                 //Any 2XX or 3XX response code is a valid HTTP response code that indicates no error
                 IsOnlineWattbox = (responseCode >= 200 && responseCode < 400);
+                if (IsOnlineWattbox)
+                {
+                    // Recovered - clear the auth-failure latch so the warning can fire again later.
+                    _authFailed = false;
+                }
 
                 var handler = TextReceived;
                 if (handler != null)
@@ -134,7 +125,7 @@ namespace Wattbox.Lib
                 {
                     return;
                 }
-                
+
                 if (response.Header.ContentType.Contains("text/xml"))
                 {
                     //Debug.Console(2, this, "Parsing");
@@ -142,7 +133,9 @@ namespace Wattbox.Lib
                     ParseResponse(response.ContentString);
                     return;
                 }
-                SetOfflineFail();
+
+                if (!IsOnlineWattbox)
+                    ReportOffline(null);
             }
             catch (Exception e)
             {
@@ -163,10 +156,91 @@ namespace Wattbox.Lib
             }
         }
 
-        private void SetOfflineFail()
+        // Builds and dispatches a single HTTP request. Returns the response, or null (with the
+        // exception message in 'error') if the dispatch throws - e.g. Crestron's HttpClient throws
+        // on a 401, with the response status line + headers in the message.
+        private HttpClientResponse TryDispatch(string url, RequestType requestType, out string error)
+        {
+            error = null;
+            try
+            {
+                var request = new HttpClientRequest();
+
+                if (!String.IsNullOrEmpty(_authorization))
+                {
+                    var encodedAuth = Convert.ToBase64String(
+                        Encoding.UTF8.GetBytes(String.Format("{0}:{1}", _username, _password)));
+                    request.Header.SetHeaderValue("Authorization",
+                        String.Format("{0} {1}", _authorization, encodedAuth));
+                }
+
+                request.Header.SetHeaderValue("User-Agent", "APP");
+                request.KeepAlive = true;
+                request.Header.SetHeaderValue("Keep-Alive", "300");
+
+                request.Url.Parse(url);
+                request.RequestType = requestType;
+
+                return _client.Dispatch(request);
+            }
+            catch (Exception e)
+            {
+                error = e.Message;
+                return null;
+            }
+        }
+
+        private static string GetAuthenticateHeader(HttpClientResponse response)
+        {
+            if (response == null || response.Header == null) return null;
+            try
+            {
+                return response.Header.GetHeaderValue("WWW-Authenticate");
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        // A real authentication failure: the device returned a 401. Latched so the warning logs
+        // once per failure, not every poll.
+        private void ReportAuthFailure()
         {
             IsOnlineWattbox = false;
-            _failtracker++;
+            if (_authFailed)
+                return;
+
+            _authFailed = true;
+            Debug.Console(0, this, Debug.ErrorLogLevel.Warning,
+                "Authentication failure (HTTP 401) - check username/password (this device uses HTTP Basic auth)");
+        }
+
+        // A transport/offline failure (timeout, refused, DNS, etc.) - NOT an auth problem. Keeps
+        // polling so the device self-heals; logged quietly to avoid spam at the poll rate.
+        private void ReportOffline(string error)
+        {
+            IsOnlineWattbox = false;
+            if (!String.IsNullOrEmpty(error))
+                Debug.Console(2, this, "HTTP request failed (offline): {0}", error);
+        }
+
+        // Surfaces exactly what each attempt returned so auth issues are diagnosable on hardware:
+        // the response code + WWW-Authenticate header when a response came back, or the raw
+        // exception message when Crestron's HttpClient threw (e.g. on a 401).
+        private void LogAuthDiagnostics(string phase, HttpClientResponse response, string error)
+        {
+            if (response != null)
+            {
+                var www = GetAuthenticateHeader(response);
+                Debug.Console(1, this, "[{0}] code={1} WWW-Authenticate={2}",
+                    phase, response.Code, String.IsNullOrEmpty(www) ? "(none)" : www);
+            }
+            else
+            {
+                Debug.Console(1, this, "[{0}] no response object; error={1}",
+                    phase, String.IsNullOrEmpty(error) ? "(none)" : error);
+            }
         }
 
         public void ParseResponse(string data)
