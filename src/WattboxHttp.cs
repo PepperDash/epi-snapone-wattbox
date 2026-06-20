@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using Crestron.SimplSharp.CrestronXmlLinq;
 using Crestron.SimplSharp.Net.Http;
 using PepperDash.Core;
@@ -57,18 +56,16 @@ namespace Wattbox.Lib
         public void GetStatus()
         {
             var newUrl = String.Format("http://{0}/wattbox_info.xml", BaseUrl);
-            var newDir = String.Format("/wattbox_info.xml");
 
             Debug.LogMessage(LogEventLevel.Debug, this, "Sending status request to {0}", newUrl);
-            SubmitRequest(newUrl, newDir, RequestType.Get);
+            SubmitRequest(newUrl, RequestType.Get);
         }
 
         public void SetOutlet(int index, int action)
         {
             var newUrl = String.Format("http://{0}/control.cgi?outlet={1}&command={2}", BaseUrl, index, action);
-            var newDir = String.Format("/control.cgi?outlet={0}&command={1}", index, action);
             //Debug.Console(2, Debug.ErrorLogLevel.Notice, "Url: {0}", newUrl);
-            SubmitRequest(newUrl, newDir, RequestType.Get);
+            SubmitRequest(newUrl, RequestType.Get);
         }
 
         public void Connect()
@@ -78,36 +75,20 @@ namespace Wattbox.Lib
 
         #endregion
 
-        public void SubmitRequest(string url, string dir, RequestType requestType)
+        public void SubmitRequest(string url, RequestType requestType)
         {
             try
             {
                 _client.KeepAlive = false;
                 _client.Port = _port > 0 && _port < 65535 ? _port : 80;
 
-                // First attempt - uses the configured scheme (Basic by default).
+                // Uses the configured scheme (Basic by default).
                 string error;
-                var response = TryDispatch(url, requestType, null, out error);
+                var response = TryDispatch(url, requestType, out error);
                 LogAuthDiagnostics("initial", response, error);
 
-                // WB-800-IPVM / OvrC firmware requires HTTP Digest auth: it rejects Basic with a
-                // 401 + 'WWW-Authenticate: Digest ...' challenge. Crestron's HttpClient surfaces that
-                // 401 as an exception whose message carries the response headers, so the challenge can
-                // arrive via 'error' (thrown) or via a returned 401 response. Retry once with Digest.
-                var challenge = ExtractDigestChallenge(response, error);
-                if (challenge != null)
-                {
-                    var digestHeader = BuildDigestHeader(challenge, MethodString(requestType), dir);
-                    if (!String.IsNullOrEmpty(digestHeader))
-                    {
-                        Debug.LogMessage(LogEventLevel.Debug, this, "Retrying request with HTTP Digest auth: {0}", digestHeader);
-                        response = TryDispatch(url, requestType, digestHeader, out error);
-                        LogAuthDiagnostics("digest-retry", response, error);
-                    }
-                }
-
-                // A 401 that survived the (optional) digest retry is a genuine auth failure. A null
-                // response without a 401 is an offline/transport failure - do NOT call it an auth error.
+                // A 401 is a genuine auth failure. A null response without a 401 is an
+                // offline/transport failure - do NOT call it an auth error.
                 if (response == null)
                 {
                     if (!String.IsNullOrEmpty(error) && error.IndexOf("401", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -179,19 +160,14 @@ namespace Wattbox.Lib
         // Builds and dispatches a single HTTP request. Returns the response, or null (with the
         // exception message in 'error') if the dispatch throws - e.g. Crestron's HttpClient throws
         // on a 401, with the response status line + headers in the message.
-        private HttpClientResponse TryDispatch(string url, RequestType requestType, string authorizationHeader, out string error)
+        private HttpClientResponse TryDispatch(string url, RequestType requestType, out string error)
         {
             error = null;
             try
             {
                 var request = new HttpClientRequest();
 
-                if (!String.IsNullOrEmpty(authorizationHeader))
-                {
-                    // Pre-computed scheme + credentials (e.g. a Digest 'response' header).
-                    request.Header.SetHeaderValue("Authorization", authorizationHeader);
-                }
-                else if (!String.IsNullOrEmpty(_authorization))
+                if (!String.IsNullOrEmpty(_authorization))
                 {
                     var encodedAuth = Convert.ToBase64String(
                         Encoding.UTF8.GetBytes(String.Format("{0}:{1}", _username, _password)));
@@ -215,29 +191,6 @@ namespace Wattbox.Lib
             }
         }
 
-        // Returns the 'Digest ...' challenge string from either a returned 401 response or the
-        // exception message of a thrown 401, or null when Digest is not being requested.
-        private static string ExtractDigestChallenge(HttpClientResponse response, string error)
-        {
-            if (response != null && response.Code == 401)
-            {
-                var hdr = GetAuthenticateHeader(response);
-                if (!String.IsNullOrEmpty(hdr) && hdr.IndexOf("Digest", StringComparison.OrdinalIgnoreCase) >= 0)
-                    return hdr;
-            }
-
-            if (!String.IsNullOrEmpty(error) &&
-                error.IndexOf("401", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                error.IndexOf("Digest", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                // Isolate the WWW-Authenticate line for cleaner parsing.
-                var match = Regex.Match(error, "WWW-Authenticate:\\s*(.+)", RegexOptions.IgnoreCase);
-                return match.Success ? match.Groups[1].Value : error;
-            }
-
-            return null;
-        }
-
         private static string GetAuthenticateHeader(HttpClientResponse response)
         {
             if (response == null || response.Header == null) return null;
@@ -251,74 +204,8 @@ namespace Wattbox.Lib
             }
         }
 
-        // Builds an RFC 2617 'Authorization: Digest ...' header value from a server challenge.
-        // Supports algorithm=MD5 and qop=auth (what OvrC / WattBox firmware uses).
-        private string BuildDigestHeader(string challenge, string method, string uri)
-        {
-            var realm = ExtractDirective(challenge, "realm");
-            var nonce = ExtractDirective(challenge, "nonce");
-            var qop = ExtractDirective(challenge, "qop");
-            var opaque = ExtractDirective(challenge, "opaque");
-            var algorithm = ExtractDirective(challenge, "algorithm");
-
-            if (String.IsNullOrEmpty(realm) || String.IsNullOrEmpty(nonce))
-            {
-                Debug.LogMessage(LogEventLevel.Debug, this, "Digest challenge missing realm/nonce - cannot authenticate");
-                return null;
-            }
-
-            var ha1 = Md5Hex(String.Format("{0}:{1}:{2}", _username, realm, _password));
-            var ha2 = Md5Hex(String.Format("{0}:{1}", method, uri));
-
-            const string nc = "00000001";
-            var cnonce = Md5Hex(Guid.NewGuid().ToString()).Substring(0, 16);
-
-            string response;
-            if (!String.IsNullOrEmpty(qop))
-                response = Md5Hex(String.Format("{0}:{1}:{2}:{3}:{4}:{5}", ha1, nonce, nc, cnonce, qop, ha2));
-            else
-                response = Md5Hex(String.Format("{0}:{1}:{2}", ha1, nonce, ha2));
-
-            var sb = new StringBuilder();
-            sb.AppendFormat("Digest username=\"{0}\", realm=\"{1}\", nonce=\"{2}\", uri=\"{3}\", response=\"{4}\"",
-                _username, realm, nonce, uri, response);
-            if (!String.IsNullOrEmpty(algorithm))
-                sb.AppendFormat(", algorithm={0}", algorithm);
-            if (!String.IsNullOrEmpty(qop))
-                sb.AppendFormat(", qop={0}, nc={1}, cnonce=\"{2}\"", qop, nc, cnonce);
-            if (!String.IsNullOrEmpty(opaque))
-                sb.AppendFormat(", opaque=\"{0}\"", opaque);
-
-            return sb.ToString();
-        }
-
-        // Pulls a directive value ('key=\"value\"' or 'key=value') out of a Digest challenge.
-        private static string ExtractDirective(string source, string key)
-        {
-            if (String.IsNullOrEmpty(source)) return null;
-            var match = Regex.Match(source, key + "\\s*=\\s*\"?([^\",]+)\"?", RegexOptions.IgnoreCase);
-            return match.Success ? match.Groups[1].Value : null;
-        }
-
-        private static string MethodString(RequestType requestType)
-        {
-            return requestType.ToString().ToUpper();
-        }
-
-        private static string Md5Hex(string input)
-        {
-            using (var md5 = new Crestron.SimplSharp.Cryptography.MD5CryptoServiceProvider())
-            {
-                var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(input));
-                var sb = new StringBuilder(hash.Length * 2);
-                foreach (var b in hash)
-                    sb.Append(b.ToString("x2"));
-                return sb.ToString();
-            }
-        }
-
-        // A real authentication failure: a 401 that the device returned even after we offered Digest
-        // (or that we could not answer). Latched so the warning logs once per failure, not every poll.
+        // A real authentication failure: the device returned a 401. Latched so the warning logs
+        // once per failure, not every poll.
         private void ReportAuthFailure()
         {
             IsOnlineWattbox = false;
@@ -327,7 +214,7 @@ namespace Wattbox.Lib
 
             _authFailed = true;
             Debug.LogMessage(LogEventLevel.Warning, this,
-                "Authentication failure (HTTP 401) - check username/password and that the device's auth scheme (Basic/Digest) is supported");
+                "Authentication failure (HTTP 401) - check username/password (this device uses HTTP Basic auth)");
         }
 
         // A transport/offline failure (timeout, refused, DNS, etc.) - NOT an auth problem. Keeps
