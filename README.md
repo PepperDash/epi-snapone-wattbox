@@ -172,3 +172,116 @@ Valid device types are
   }
 }
 ```
+<!-- START Minimum Essentials Framework Versions -->
+### Minimum Essentials Framework Versions
+
+- 1.12.2
+<!-- END Minimum Essentials Framework Versions -->
+<!-- START Supported Types -->
+
+<!-- END Supported Types -->
+<!-- START Join Maps -->
+
+<!-- END Join Maps -->
+<!-- START Interfaces Implemented -->
+### Interfaces Implemented
+
+- IDeviceInfoProvider
+- ICommunicationMonitor
+- IBridgeAdvanced
+- IWattboxCommunications
+<!-- END Interfaces Implemented -->
+<!-- START Base Classes -->
+### Base Classes
+
+- Device
+- ReconfigurableDevice
+- PepperDash.Essentials.Core.Devices.IHasControlledPowerOutlets
+- PepperDash.Essentials.Core.Devices.IHasPowerCycle
+- StatusMonitorBase
+- JoinMapBaseAdvanced
+<!-- END Base Classes -->
+<!-- START Public Methods -->
+### Public Methods
+
+- public void Initialize(STRING key, STRING method, STRING ipAddress, STRING userName, STRING password,
+            INTEGER port)
+- public void Initialize(string key, string method, TcpSshPropertiesConfig tcpProperties)
+- public void PollEnable(INTEGER enable)
+- public void SetOutlet(INTEGER index, INTEGER action)
+- public void GetStatus()
+- public void GetStatus()
+- public void SetOutlet(int index, int action)
+- public void SetOutlet(int index, EWattboxOutletSet action)
+- public void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
+- public void OnDeviceInfoChanged()
+- public void UpdateDeviceInfo()
+- public bool CheckIp(string data)
+- public void SetOutlet(int outletNumber, int outletStatus)
+- public void Connect()
+- public void GetStatus()
+- public void ParseResponse(string data)
+- public void SendLine(string data)
+- public void SendLine(object data)
+- public void SendBytes(byte[] bytes)
+- public void SendText(string text)
+- public void Disconnect()
+- public void SetPowerStatus(bool status)
+- public void SetName(string name)
+- public void PowerCycle()
+- public void PowerOff()
+- public void PowerOn()
+- public void PowerToggle()
+- public void LinkOutlet(BasicTriList trilist, WattboxJoinmapDynamic joinMap)
+- public void LinkOutlet(BasicTriList trilist, PduJoinMapBase joinMap, int offset)
+- public void Connect()
+- public void GetStatus()
+- public void SetOutlet(int index, int action)
+- public void SendBytes(byte[] bytes)
+- public void SendText(string text)
+- public void Disconnect()
+- public void GetStatus()
+- public void SetOutlet(int index, int action)
+- public void Connect()
+- public void SubmitRequest(string url, RequestType requestType)
+- public void ParseResponse(string data)
+- public void SendBytes(byte[] bytes)
+- public void SendText(string text)
+- public void Disconnect()
+- public void SetOutlet(int outletNumber, int outletStatus)
+- public void Connect()
+- public void GetStatus()
+- public void ParseResponse(string data)
+- public void SendLine(string data)
+- public void SendLine(object data)
+- public void SendBytes(byte[] bytes)
+- public void SendText(string text)
+- public void Disconnect()
+- public void GetStatus()
+- public void SetOutlet(int index, int action)
+- public void Connect()
+- public void SubmitRequest(string url, RequestType requestType)
+- public void ParseResponse(string data)
+- public void SendBytes(byte[] bytes)
+- public void SendText(string text)
+- public void Disconnect()
+<!-- END Public Methods -->
+<!-- START Bool Feedbacks -->
+### Bool Feedbacks
+
+- IsOnlineFeedback
+- IpChangeFeedback
+- PowerIsOnFeedback
+- EnabledFeedback
+<!-- END Bool Feedbacks -->
+<!-- START Int Feedbacks -->
+### Int Feedbacks
+
+- OutletCountFeedback
+<!-- END Int Feedbacks -->
+<!-- START String Feedbacks -->
+### String Feedbacks
+
+- NameFeedback
+- NameFeedback
+<!-- END String Feedbacks -->
