@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using Crestron.SimplSharpPro.DeviceSupport;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
 
-namespace Pdu_Wattbox_Epi
+namespace PepperDash.Essentials.Plugins
 {
     public class WattboxOutlet : PepperDash.Essentials.Core.Devices.IHasPowerCycle
     {

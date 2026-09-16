@@ -5,15 +5,15 @@ using PepperDash.Core;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Serilog.Events;
-using Wattbox.Lib;
+using PepperDash.Essentials.Plugins.Wattbox.Lib;
 
-namespace Pdu_Wattbox_Epi
+namespace PepperDash.Essentials.Plugins
 {
     public class WattboxFactory : EssentialsPluginDeviceFactory<WattboxController>
     {
         public WattboxFactory()
         {
-            MinimumEssentialsFrameworkVersion = "1.12.2";
+            MinimumEssentialsFrameworkVersion = "3.0.0";
 
             TypeNames = new List<string> {"wattbox"};
         }

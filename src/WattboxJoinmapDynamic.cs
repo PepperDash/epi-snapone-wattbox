@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 
-namespace Pdu_Wattbox_Epi
+namespace PepperDash.Essentials.Plugins
 {
     public class WattboxJoinmapDynamic : JoinMapBaseAdvanced
     {

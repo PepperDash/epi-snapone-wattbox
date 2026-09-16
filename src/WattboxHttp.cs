@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Text;
 using Crestron.SimplSharp.CrestronXmlLinq;
@@ -6,7 +6,7 @@ using Crestron.SimplSharp.Net.Http;
 using PepperDash.Core;
 using Serilog.Events;
 
-namespace Wattbox.Lib
+namespace PepperDash.Essentials.Plugins.Wattbox.Lib
 {
     public class WattboxHttp : IWattboxCommunications
     {

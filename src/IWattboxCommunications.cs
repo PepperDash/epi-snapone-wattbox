@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using PepperDash.Core;
 
-namespace Wattbox.Lib
+namespace PepperDash.Essentials.Plugins.Wattbox.Lib
 {
     public delegate void OutletStatusUpdate(List<bool> outletStatus);
 

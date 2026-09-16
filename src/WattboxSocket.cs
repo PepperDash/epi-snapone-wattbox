@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Crestron.SimplSharp;
@@ -6,7 +6,7 @@ using PepperDash.Core;
 using Serilog.Events;
 
 
-namespace Wattbox.Lib
+namespace PepperDash.Essentials.Plugins.Wattbox.Lib
 {
     public class WattboxSocket : IWattboxCommunications
     {

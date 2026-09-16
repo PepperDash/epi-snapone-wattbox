@@ -16,7 +16,7 @@ using PepperDash.Essentials.Core.Devices;
 using Serilog.Events;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
-namespace Pdu_Wattbox_Epi
+namespace PepperDash.Essentials.Plugins
 {
     public class WattboxController : ReconfigurableDevice, PepperDash.Essentials.Core.Devices.IHasControlledPowerOutlets, IDeviceInfoProvider, ICommunicationMonitor, IBridgeAdvanced
     {
@@ -376,7 +376,7 @@ namespace Pdu_Wattbox_Epi
 
         #region Overrides of Device
 
-        public override void Initialize()
+        protected override void Initialize()
         {
             Comms.Connect();
             Comms.Start();

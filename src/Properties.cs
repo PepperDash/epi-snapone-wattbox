@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PepperDash.Essentials.Core;
 
 
-namespace Pdu_Wattbox_Epi {
+namespace PepperDash.Essentials.Plugins {
     public class Properties {
         [JsonProperty("control")]
         public EssentialsControlPropertiesConfig Control { get; set; }
