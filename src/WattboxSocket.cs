@@ -260,7 +260,7 @@ namespace PepperDash.Essentials.Plugins.Wattbox.Lib
             }
             _portGather.LineReceived += PortGather_LineReceived;
 
-            Debug.LogMessage(LogEventLevel.Verbose, this, "sending password {0}", _config.Password);
+            Debug.LogMessage(LogEventLevel.Verbose, this, "sending password");
             SendLine(_config.Password);
 
         }
