@@ -1,11 +1,12 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Text;
 using Crestron.SimplSharp.CrestronXmlLinq;
 using Crestron.SimplSharp.Net.Http;
 using PepperDash.Core;
+using Serilog.Events;
 
-namespace Wattbox.Lib
+namespace PepperDash.Essentials.Plugins.Wattbox.Lib
 {
     public class WattboxHttp : IWattboxCommunications
     {
@@ -56,7 +57,7 @@ namespace Wattbox.Lib
         {
             var newUrl = String.Format("http://{0}/wattbox_info.xml", BaseUrl);
 
-            Debug.Console(1, this, "Sending status request to {0}", newUrl);
+            Debug.LogMessage(LogEventLevel.Debug, this, "Sending status request to {0}", newUrl);
             SubmitRequest(newUrl, RequestType.Get);
         }
 
@@ -99,7 +100,7 @@ namespace Wattbox.Lib
 
                 var responseCode = response.Code;
 
-                Debug.Console(1, "{0}:{1}", url, responseCode);
+                Debug.LogMessage(LogEventLevel.Debug, "{0}:{1}", url, responseCode);
 
                 if (responseCode == 401)
                 {
@@ -139,8 +140,8 @@ namespace Wattbox.Lib
             }
             catch (Exception e)
             {
-                Debug.Console(2, this, "Exception in HTTP Request : {0}", e.Message);
-                Debug.Console(2, this, "Stack Trace: {0}", e.StackTrace);
+                Debug.LogMessage(LogEventLevel.Error, this, "Exception in HTTP Request : {0}", e.Message);
+                Debug.LogMessage(LogEventLevel.Verbose, this, "Stack Trace: {0}", e.StackTrace);
                 if (e.Message.ToLower().Contains("unauthorized") || e.Message.ToLower().Contains("401"))
                     IsOnlineWattbox = false;
             }
@@ -212,7 +213,7 @@ namespace Wattbox.Lib
                 return;
 
             _authFailed = true;
-            Debug.Console(0, this, Debug.ErrorLogLevel.Warning,
+            Debug.LogMessage(LogEventLevel.Warning, this,
                 "Authentication failure (HTTP 401) - check username/password (this device uses HTTP Basic auth)");
         }
 
@@ -222,7 +223,7 @@ namespace Wattbox.Lib
         {
             IsOnlineWattbox = false;
             if (!String.IsNullOrEmpty(error))
-                Debug.Console(2, this, "HTTP request failed (offline): {0}", error);
+                Debug.LogMessage(LogEventLevel.Verbose, this, "HTTP request failed (offline): {0}", error);
         }
 
         // Surfaces exactly what each attempt returned so auth issues are diagnosable on hardware:
@@ -233,19 +234,19 @@ namespace Wattbox.Lib
             if (response != null)
             {
                 var www = GetAuthenticateHeader(response);
-                Debug.Console(1, this, "[{0}] code={1} WWW-Authenticate={2}",
+                Debug.LogMessage(LogEventLevel.Debug, this, "[{0}] code={1} WWW-Authenticate={2}",
                     phase, response.Code, String.IsNullOrEmpty(www) ? "(none)" : www);
             }
             else
             {
-                Debug.Console(1, this, "[{0}] no response object; error={1}",
+                Debug.LogMessage(LogEventLevel.Debug, this, "[{0}] no response object; error={1}",
                     phase, String.IsNullOrEmpty(error) ? "(none)" : error);
             }
         }
 
         public void ParseResponse(string data)
         {
-            Debug.Console(2, this, "Response content: {0}", data);
+            Debug.LogMessage(LogEventLevel.Verbose, this, "Response content: {0}", data);
             if (data.Contains("host_name"))
             {
                 var xml = XElement.Parse(data);
@@ -309,12 +310,12 @@ namespace Wattbox.Lib
 
         public void SendBytes(byte[] bytes)
         {
-            Debug.Console(0, this, "Unsupported - Added to adhere to interface");
+            Debug.LogMessage(LogEventLevel.Warning, this, "Unsupported - Added to adhere to interface");
         }
 
         public void SendText(string text)
         {
-            Debug.Console(0, this, "Unsupported - Added to adhere to interface");
+            Debug.LogMessage(LogEventLevel.Warning, this, "Unsupported - Added to adhere to interface");
         }
 
         #endregion
@@ -325,7 +326,7 @@ namespace Wattbox.Lib
 
         public void Disconnect()
         {
-            Debug.Console(0, this, "Unsupported - Added to adhere to interface");
+            Debug.LogMessage(LogEventLevel.Warning, this, "Unsupported - Added to adhere to interface");
         }
 
         public bool IsConnected

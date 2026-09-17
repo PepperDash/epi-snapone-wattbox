@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
-using Wattbox.Lib;
+using PepperDash.Essentials.Plugins.Wattbox.Lib;
 
-namespace Pdu_Wattbox_Epi
+namespace PepperDash.Essentials.Plugins
 {
     public class WattboxCommunicationMonitor : StatusMonitorBase, IWattboxCommunications
     {

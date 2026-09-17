@@ -1,11 +1,12 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Crestron.SimplSharp;
 using PepperDash.Core;
+using Serilog.Events;
 
 
-namespace Wattbox.Lib
+namespace PepperDash.Essentials.Plugins.Wattbox.Lib
 {
     public class WattboxSocket : IWattboxCommunications
     {
@@ -23,7 +24,7 @@ namespace Wattbox.Lib
             Key = key;
             Name = name;
 
-            Debug.Console(1, this, "Made it to constructor for Wattbox Socket");
+            Debug.LogMessage(LogEventLevel.Debug, this, "Made it to constructor for Wattbox Socket");
             _config = tcpProperties;
 
             Communication = comm;
@@ -106,7 +107,7 @@ namespace Wattbox.Lib
 
         public void Connect()
         {
-            Debug.Console(2, this, "Attempting to connect...");
+            Debug.LogMessage(LogEventLevel.Verbose, this, "Attempting to connect...");
             Communication.Connect();
         }
 
@@ -146,18 +147,18 @@ namespace Wattbox.Lib
 
         public void ParseResponse(string data)
         {
-            Debug.Console(2, this, "ParseResponse: {0}", data);
+            Debug.LogMessage(LogEventLevel.Verbose, this, "ParseResponse: {0}", data);
 
             if (data.Contains("#Error"))
             {
-                Debug.ConsoleWithLog(0, this, "Error Parsing Respone - Verify device config: {0}", data);
+                Debug.LogMessage(LogEventLevel.Warning, this, "Error Parsing Respone - Verify device config: {0}", data);
                 return;
             }
 
             if (data.Contains("?OutletStatus="))
             {
                 var outletStatString = data.Substring(14);
-                Debug.Console(2, this, "state substring: {0}", outletStatString);
+                Debug.LogMessage(LogEventLevel.Verbose, this, "state substring: {0}", outletStatString);
                 var outletStatusList = outletStatString.Split(',').Select(s => s == "1").ToList();
 
                 var handler = UpdateOutletStatus;
@@ -169,7 +170,7 @@ namespace Wattbox.Lib
             if (data.Contains("?OutletName="))
             {
                 var outletNameString = data.Substring(12);
-                Debug.Console(2, this, "name substring: {0}", outletNameString);
+                Debug.LogMessage(LogEventLevel.Verbose, this, "name substring: {0}", outletNameString);
 
                 // Names are wrapped in braces: {Name1},{Name2},...  A name may itself contain a
                 // comma (e.g. "{RDL Devices - PS4 - UA1, BA1}"), so extract by braces rather than
@@ -193,7 +194,7 @@ namespace Wattbox.Lib
             if (data.Contains("?Hostname="))
             {
                 var hostnameString = data.Substring(10);
-                Debug.Console(2, this, "Hostname : {0}", hostnameString);
+                Debug.LogMessage(LogEventLevel.Verbose, this, "Hostname : {0}", hostnameString);
                 var handler = UpdateHostname;
                 if (handler != null) handler(hostnameString);
 
@@ -203,7 +204,7 @@ namespace Wattbox.Lib
             if (data.Contains("?ServiceTag="))
             {
                 var serialString = data.Substring(12);
-                Debug.Console(2, this, "Serial : {0}", serialString);
+                Debug.LogMessage(LogEventLevel.Verbose, this, "Serial : {0}", serialString);
                 var handler = UpdateSerial;
                 if (handler != null) handler(serialString);
 
@@ -215,7 +216,7 @@ namespace Wattbox.Lib
             if (data.Contains("?Firmware="))
             {
                 var firmwareString = data.Substring(10);
-                Debug.Console(2, this, "Firmware : {0}", firmwareString);
+                Debug.LogMessage(LogEventLevel.Verbose, this, "Firmware : {0}", firmwareString);
                 var handler = UpdateFirmwareVersion;
                 if (handler != null) handler(firmwareString);
 
@@ -237,7 +238,7 @@ namespace Wattbox.Lib
 
             if (data.Contains("Username"))
             {
-                Debug.Console(2, this, "sending username {0}", _config.Username);
+                Debug.LogMessage(LogEventLevel.Verbose, this, "sending username {0}", _config.Username);
                 SendLine(_config.Username);
                 return;
             }
@@ -259,7 +260,7 @@ namespace Wattbox.Lib
             }
             _portGather.LineReceived += PortGather_LineReceived;
 
-            Debug.Console(2, this, "sending password {0}", _config.Password);
+            Debug.LogMessage(LogEventLevel.Verbose, this, "sending password");
             SendLine(_config.Password);
 
         }
